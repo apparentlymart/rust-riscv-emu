@@ -1,7 +1,11 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+#![no_std]
+
+mod cpu;
+mod data;
+mod instruction;
+mod memory;
+mod register;
+
+pub use cpu::CPU;
+pub use memory::Bus;
+pub use register::Register;
