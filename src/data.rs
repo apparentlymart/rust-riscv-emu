@@ -105,6 +105,10 @@ macro_rules! int_value_impl {
                 // Our methodology here is to do a shift left followed by a shift right
                 // while interpreting the value as signed, and thus having the shift right
                 // do the necessary sign extension.
+                if specified_bits == 32 {
+                    // Easy case: the number is already fully-specified
+                    return Self::from_signed(v as $signed);
+                }
                 let shift = ((size_of::<u32>() * 8) - specified_bits) as usize;
                 let sv = unsafe { transmute::<u32, i32>(v) };
                 let shifted = sv << shift;
