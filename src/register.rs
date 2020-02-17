@@ -10,6 +10,10 @@ impl Register {
         }
         return Self(n);
     }
+
+    pub fn zero() -> Self {
+        Self::num(0)
+    }
 }
 
 impl PartialEq for Register {

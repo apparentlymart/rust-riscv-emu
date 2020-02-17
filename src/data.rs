@@ -1,4 +1,4 @@
-use core::mem::transmute;
+use core::mem::{size_of, transmute};
 use core::ops;
 
 // Trait implemented by types that can support the operations needed to
@@ -15,6 +15,7 @@ use core::ops;
 pub trait IntValue
 where
     Self: Copy
+        + PartialEq
         + ops::Add
         + ops::Sub
         + ops::Mul
@@ -22,41 +23,10 @@ where
         + ops::BitAnd
         + ops::BitOr
         + ops::BitXor
-        + ops::Shl
-        + ops::Shr,
+        + ops::Shl<usize>
+        + ops::Shr<usize>,
 {
     fn zero() -> Self;
-}
-
-impl IntValue for u32 {
-    fn zero() -> Self {
-        return 0;
-    }
-}
-impl IntValue for i32 {
-    fn zero() -> Self {
-        return 0;
-    }
-}
-impl IntValue for u64 {
-    fn zero() -> Self {
-        return 0;
-    }
-}
-impl IntValue for i64 {
-    fn zero() -> Self {
-        return 0;
-    }
-}
-impl IntValue for u128 {
-    fn zero() -> Self {
-        return 0;
-    }
-}
-impl IntValue for i128 {
-    fn zero() -> Self {
-        return 0;
-    }
 }
 
 // Represents the "XLEN" of a particular CPU, which depends on which of the
@@ -88,80 +58,64 @@ pub trait IntBits: IntValue {
     fn to_unsigned(self) -> Self::Unsigned;
     fn from_signed(v: Self::Signed) -> Self;
     fn from_unsigned(v: Self::Unsigned) -> Self;
+    fn from_raw_sign_ext(v: u32, sign_bit: usize) -> Self;
 }
 
-impl IntBits for u32 {
-    type Address = u32;
-    type Signed = i32;
-    type Unsigned = u32;
+macro_rules! int_value_impl {
+    ($unsigned:ty, $signed:ty) => {
+        impl IntValue for $unsigned {
+            fn zero() -> Self {
+                return 0;
+            }
+        }
 
-    fn to_address(self) -> Self::Address {
-        unsafe { transmute::<Self, Self::Address>(self) }
-    }
+        impl IntValue for $signed {
+            fn zero() -> Self {
+                return 0;
+            }
+        }
 
-    fn to_signed(self) -> Self::Signed {
-        unsafe { transmute::<Self, Self::Signed>(self) }
-    }
+        impl IntBits for $unsigned {
 
-    fn to_unsigned(self) -> Self::Unsigned {
-        unsafe { transmute::<Self, Self::Unsigned>(self) }
-    }
+            type Address = $unsigned;
+            type Signed = $signed;
+            type Unsigned = $unsigned;
 
-    fn from_signed(v: Self::Signed) -> Self {
-        unsafe { transmute::<Self::Signed, Self>(v) }
-    }
+            fn to_address(self) -> Self::Address {
+                unsafe { transmute::<Self, Self::Address>(self) }
+            }
 
-    fn from_unsigned(v: Self::Unsigned) -> Self {
-        unsafe { transmute::<Self::Unsigned, Self>(v) }
-    }
+            fn to_signed(self) -> Self::Signed {
+                self as Self::Signed
+            }
+
+            fn to_unsigned(self) -> Self::Unsigned {
+                self as Self::Unsigned
+            }
+
+            fn from_signed(v: Self::Signed) -> Self {
+                unsafe { transmute::<Self::Signed, Self>(v) }
+            }
+
+            fn from_unsigned(v: Self::Unsigned) -> Self {
+                unsafe { transmute::<Self::Unsigned, Self>(v) }
+            }
+
+            fn from_raw_sign_ext(v: u32, specified_bits: usize) -> Self {
+                // Our methodology here is to do a shift left followed by a shift right
+                // while interpreting the value as signed, and thus having the shift right
+                // do the necessary sign extension.
+                let shift = ((size_of::<u32>() * 8) - specified_bits) as usize;
+                let sv = unsafe { transmute::<u32, i32>(v) };
+                let shifted = sv << shift;
+                let unshifted = shifted >> shift;
+                return Self::from_signed(unshifted as $signed);
+            }
+
+        }
+    };
 }
-impl IntBits for u64 {
-    type Address = u64;
-    type Signed = i64;
-    type Unsigned = u64;
 
-    fn to_address(self) -> Self::Address {
-        unsafe { transmute::<Self, Self::Address>(self) }
-    }
-
-    fn to_signed(self) -> Self::Signed {
-        self as Self::Signed
-    }
-
-    fn to_unsigned(self) -> Self::Unsigned {
-        self as Self::Unsigned
-    }
-
-    fn from_signed(v: Self::Signed) -> Self {
-        unsafe { transmute::<Self::Signed, Self>(v) }
-    }
-
-    fn from_unsigned(v: Self::Unsigned) -> Self {
-        unsafe { transmute::<Self::Unsigned, Self>(v) }
-    }
-}
-impl IntBits for u128 {
-    type Address = u128;
-    type Signed = i128;
-    type Unsigned = u128;
-
-    fn to_address(self) -> Self::Address {
-        unsafe { transmute::<Self, Self::Address>(self) }
-    }
-
-    fn to_signed(self) -> Self::Signed {
-        self as Self::Signed
-    }
-
-    fn to_unsigned(self) -> Self::Unsigned {
-        self as Self::Unsigned
-    }
-
-    fn from_signed(v: Self::Signed) -> Self {
-        unsafe { transmute::<Self::Signed, Self>(v) }
-    }
-
-    fn from_unsigned(v: Self::Unsigned) -> Self {
-        unsafe { transmute::<Self::Unsigned, Self>(v) }
-    }
-}
+int_value_impl!(u32, i32);
+int_value_impl!(u64, i64);
+int_value_impl!(u128, i128);

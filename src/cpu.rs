@@ -1,6 +1,6 @@
 use crate::data::{IntBits, IntValue};
-use crate::register::{Register, Registers};
 use crate::memory::Bus;
+use crate::register::{Register, Registers};
 
 pub struct CPU<XL, Addr, Mem>
 where
