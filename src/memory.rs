@@ -30,8 +30,246 @@ pub trait Bus<Addr> {
 /// Represents the ways in which a memory access can fail. These map indirectly
 /// onto the processor's exception codes, but the exact mapping depends on
 /// what exactly the CPU was aiming to achieve with the particular memory access.
+#[derive(Debug)]
 pub enum MemoryError {
     Misaligned,
     AccessFault,
     PageFault,
+}
+
+pub struct Memory<'b> {
+    buf: &'b mut [u8],
+    writable: bool,
+}
+
+impl<'b> Memory<'b> {
+    pub fn new_ram(buf: &'b mut [u8]) -> Self {
+        Self {
+            buf: buf,
+            writable: true,
+        }
+    }
+
+    pub fn new_rom(buf: &'b mut [u8]) -> Self {
+        Self {
+            buf: buf,
+            writable: false,
+        }
+    }
+}
+
+impl<'b> Bus<usize> for Memory<'b> {
+    fn read_byte(&mut self, addr: usize) -> Result<Byte, MemoryError> {
+        return Ok(self.buf[addr % self.buf.len()]);
+    }
+
+    fn write_byte(&mut self, addr: usize, data: Byte) -> Result<(), MemoryError> {
+        if !self.writable {
+            return Err(MemoryError::AccessFault);
+        }
+        let l: usize;
+        {
+            l = self.buf.len();
+        }
+        self.buf[addr % l] = data;
+        return Ok(());
+    }
+
+    fn read_word(&mut self, addr: usize) -> Result<Word, MemoryError> {
+        let mut ret: Word = 0;
+        for s in 0..4 {
+            ret = ret | ((self.buf[(addr + s) % self.buf.len()] as Word) << (s * 8))
+        }
+        return Ok(ret);
+    }
+
+    fn write_word(&mut self, addr: usize, data: Word) -> Result<(), MemoryError> {
+        if !self.writable {
+            return Err(MemoryError::AccessFault);
+        }
+        let l: usize;
+        {
+            l = self.buf.len();
+        }
+        for s in 0..4 {
+            self.buf[(addr + s) % l] = ((data >> (s * 8)) & 0xff) as u8;
+        }
+        return Ok(());
+    }
+
+    fn read_halfword(&mut self, addr: usize) -> Result<Halfword, MemoryError> {
+        let mut ret: Halfword = 0;
+        for s in 0..2 {
+            ret = ret | ((self.buf[(addr + s) % self.buf.len()] as Halfword) << (s * 8))
+        }
+        return Ok(ret);
+    }
+
+    fn write_halfword(&mut self, addr: usize, data: Halfword) -> Result<(), MemoryError> {
+        if !self.writable {
+            return Err(MemoryError::AccessFault);
+        }
+        let l: usize;
+        {
+            l = self.buf.len();
+        }
+        for s in 0..2 {
+            self.buf[(addr + s) % l] = ((data >> (s * 8)) & 0xff) as u8;
+        }
+        return Ok(());
+    }
+
+    fn read_doubleword(&mut self, addr: usize) -> Result<Doubleword, MemoryError> {
+        let mut ret: Doubleword = 0;
+        for s in 0..8 {
+            ret = ret | ((self.buf[(addr + s) % self.buf.len()] as Doubleword) << (s * 8))
+        }
+        return Ok(ret);
+    }
+
+    fn write_doubleword(&mut self, addr: usize, data: Doubleword) -> Result<(), MemoryError> {
+        if !self.writable {
+            return Err(MemoryError::AccessFault);
+        }
+        let l: usize;
+        {
+            l = self.buf.len();
+        }
+        for s in 0..8 {
+            self.buf[(addr + s) % l] = ((data >> (s * 8)) & 0xff) as u8;
+        }
+        return Ok(());
+    }
+
+    fn read_quadword(&mut self, addr: usize) -> Result<Quadword, MemoryError> {
+        let mut ret: Quadword = 0;
+        for s in 0..16 {
+            ret = ret | ((self.buf[(addr + s) % self.buf.len()] as Quadword) << (s * 8))
+        }
+        return Ok(ret);
+    }
+
+    fn write_quadword(&mut self, addr: usize, data: Quadword) -> Result<(), MemoryError> {
+        if !self.writable {
+            return Err(MemoryError::AccessFault);
+        }
+        let l: usize;
+        {
+            l = self.buf.len();
+        }
+        for s in 0..16 {
+            self.buf[(addr + s) % l] = ((data >> (s * 8)) & 0xff) as u8;
+        }
+        return Ok(());
+    }
+
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Bus, Memory};
+
+    #[test]
+    fn memory_writable() {
+        let mut buf: [u8; 32] = [0; 32];
+        let mut ram = Memory::new_ram(&mut buf);
+
+        // RAM is all zeroes initially, per our initializer above.
+        assert_eq!(ram.read_byte(0).unwrap(), 0 as u8);
+        assert_eq!(ram.read_halfword(0).unwrap(), 0 as u16);
+        assert_eq!(ram.read_word(0).unwrap(), 0 as u32);
+        assert_eq!(ram.read_doubleword(0).unwrap(), 0 as u64);
+        assert_eq!(ram.read_quadword(0).unwrap(), 0 as u128);
+
+        // Can also do unaligned reads.
+        assert_eq!(ram.read_byte(1).unwrap(), 0 as u8);
+        assert_eq!(ram.read_halfword(1).unwrap(), 0 as u16);
+        assert_eq!(ram.read_word(1).unwrap(), 0 as u32);
+        assert_eq!(ram.read_doubleword(1).unwrap(), 0 as u64);
+        assert_eq!(ram.read_quadword(1).unwrap(), 0 as u128);
+
+        // We'll write a quadword into location zero and then reinterpret its
+        // bytes as other types. Note that this machine is little-endian,
+        // so the "0x10" octet below should end up at address zero.
+        ram.write_quadword(0, 0x01_02_03_04_05_06_07_08_09_0a_0b_0c_0d_0e_0f_10)
+            .unwrap();
+
+        assert_eq!(ram.read_byte(0).unwrap(), 0x10 as u8);
+        assert_eq!(ram.read_halfword(0).unwrap(), 0x0f_10 as u16);
+        assert_eq!(ram.read_word(0).unwrap(), 0x0d_0e_0f_10 as u32);
+        assert_eq!(
+            ram.read_doubleword(0).unwrap(),
+            0x09_0a_0b_0c_0d_0e_0f_10 as u64
+        );
+        assert_eq!(
+            ram.read_quadword(0).unwrap(),
+            0x01_02_03_04_05_06_07_08_09_0a_0b_0c_0d_0e_0f_10 as u128
+        );
+
+        ram.write_byte(0, 0xff).unwrap();
+        assert_eq!(ram.read_byte(0).unwrap(), 0xff as u8);
+        assert_eq!(ram.read_halfword(0).unwrap(), 0x0f_ff as u16);
+        assert_eq!(ram.read_word(0).unwrap(), 0x0d_0e_0f_ff as u32);
+        assert_eq!(
+            ram.read_doubleword(0).unwrap(),
+            0x09_0a_0b_0c_0d_0e_0f_ff as u64
+        );
+        assert_eq!(
+            ram.read_quadword(0).unwrap(),
+            0x01_02_03_04_05_06_07_08_09_0a_0b_0c_0d_0e_0f_ff as u128
+        );
+
+        ram.write_halfword(0, 0xbeef).unwrap();
+        assert_eq!(ram.read_byte(0).unwrap(), 0xef as u8);
+        assert_eq!(ram.read_halfword(0).unwrap(), 0xbe_ef as u16);
+        assert_eq!(ram.read_word(0).unwrap(), 0x0d_0e_be_ef as u32);
+        assert_eq!(
+            ram.read_doubleword(0).unwrap(),
+            0x09_0a_0b_0c_0d_0e_be_ef as u64
+        );
+        assert_eq!(
+            ram.read_quadword(0).unwrap(),
+            0x01_02_03_04_05_06_07_08_09_0a_0b_0c_0d_0e_be_ef as u128
+        );
+
+        ram.write_word(0, 0xdeadbeef).unwrap();
+        assert_eq!(ram.read_byte(0).unwrap(), 0xef as u8);
+        assert_eq!(ram.read_halfword(0).unwrap(), 0xbe_ef as u16);
+        assert_eq!(ram.read_word(0).unwrap(), 0xde_ad_be_ef as u32);
+        assert_eq!(
+            ram.read_doubleword(0).unwrap(),
+            0x09_0a_0b_0c_de_ad_be_ef as u64
+        );
+        assert_eq!(
+            ram.read_quadword(0).unwrap(),
+            0x01_02_03_04_05_06_07_08_09_0a_0b_0c_de_ad_be_ef as u128
+        );
+
+        ram.write_doubleword(0, 0xfeedfacecafebeef).unwrap();
+        assert_eq!(ram.read_byte(0).unwrap(), 0xef as u8);
+        assert_eq!(ram.read_halfword(0).unwrap(), 0xbe_ef as u16);
+        assert_eq!(ram.read_word(0).unwrap(), 0xca_fe_be_ef as u32);
+        assert_eq!(
+            ram.read_doubleword(0).unwrap(),
+            0xfe_ed_fa_ce_ca_fe_be_ef as u64
+        );
+        assert_eq!(
+            ram.read_quadword(0).unwrap(),
+            0x01_02_03_04_05_06_07_08_fe_ed_fa_ce_ca_fe_be_ef as u128
+        );
+
+        // Repeat unaligned read testing with nonzero data.
+        assert_eq!(ram.read_byte(1).unwrap(), 0xbe as u8);
+        assert_eq!(ram.read_halfword(1).unwrap(), 0xfe_be as u16);
+        assert_eq!(ram.read_word(1).unwrap(), 0xce_ca_fe_be as u32);
+        assert_eq!(
+            ram.read_doubleword(1).unwrap(),
+            0x08_fe_ed_fa_ce_ca_fe_be as u64
+        );
+        assert_eq!(
+            ram.read_quadword(1).unwrap(),
+            0x00_01_02_03_04_05_06_07_08_fe_ed_fa_ce_ca_fe_be as u128
+        );
+    }
+
 }
