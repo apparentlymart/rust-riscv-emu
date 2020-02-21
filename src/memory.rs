@@ -165,9 +165,131 @@ impl<'b> Bus<usize> for Memory<'b> {
 
 }
 
+/// Adapter type for wrapping a Bus that expects one address type to make it
+/// appear instead as a Bus for another address type, as long as a conversion
+/// is available from the "outer" address type to the "inner" address type.
+pub struct AddressConverter<Outside, Inside, Wrapped>
+where
+    Outside: core::convert::TryInto<Inside>,
+    Wrapped: Bus<Inside>,
+{
+    wrapped: Wrapped,
+    phantom_outside: core::marker::PhantomData<Outside>,
+    phantom_inside: core::marker::PhantomData<Inside>,
+}
+
+impl<Outside, Inside, Wrapped> AddressConverter<Outside, Inside, Wrapped>
+where
+    Outside: core::convert::TryInto<Inside>,
+    Wrapped: Bus<Inside>,
+{
+
+    // Consumes a bus and produces a wrapping `AddressConverter` that will
+    // convert incoming addresses to the given bus's address type.
+    //
+    // This can be useful, for example, to adapt a `Memory` instance (whose
+    // address type is always `usize`) to the address size used by a specific
+    // instantiation of `CPU`, such as `u32` for rv32 or `u64` for rv64.
+    //
+    // The signature of this function does not imply the "outside" type for
+    // the address converter. To specify the outside type, assign the result
+    // to something that implements `Bus` with the desired address type.
+    pub fn new(mut wrapped: Wrapped) -> Self {
+        Self {
+            wrapped: wrapped,
+            phantom_outside: core::marker::PhantomData,
+            phantom_inside: core::marker::PhantomData,
+        }
+    }
+
+    pub fn convert_address(&self, addr: Outside) -> Option<Inside> {
+        match addr.try_into() {
+            Ok(in_addr) => Some(in_addr),
+            Err(_) => None,
+        }
+    }
+}
+
+impl<Outside, Inside, Wrapped> Bus<Outside> for AddressConverter<Outside, Inside, Wrapped>
+where
+    Outside: core::convert::TryInto<Inside>,
+    Wrapped: Bus<Inside>,
+{
+
+    fn read_byte(&mut self, addr: Outside) -> Result<Byte, MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_byte(addr),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn read_halfword(&mut self, addr: Outside) -> Result<Halfword, MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_halfword(addr),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn read_word(&mut self, addr: Outside) -> Result<Word, MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_word(addr),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn read_doubleword(&mut self, addr: Outside) -> Result<Doubleword, MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_doubleword(addr),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn read_quadword(&mut self, addr: Outside) -> Result<Quadword, MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_quadword(addr),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn write_byte(&mut self, addr: Outside, data: Byte) -> Result<(), MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_byte(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn write_halfword(&mut self, addr: Outside, data: Halfword) -> Result<(), MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_halfword(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn write_word(&mut self, addr: Outside, data: Word) -> Result<(), MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_word(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn write_doubleword(&mut self, addr: Outside, data: Doubleword) -> Result<(), MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_doubleword(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+
+    fn write_quadword(&mut self, addr: Outside, data: Quadword) -> Result<(), MemoryError> {
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_quadword(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Bus, Memory};
+    use super::{AddressConverter, Bus, Memory};
 
     #[test]
     fn memory_writable() {
@@ -272,126 +394,13 @@ mod tests {
         );
     }
 
-}
+    #[test]
+    fn address_converter() {
+        let mut buf: [u8; 32] = [0; 32];
+        let ram = Memory::new_ram(&mut buf);
+        let mut bus = AddressConverter::<u32, usize, Memory>::new(ram);
 
-/// Adapter type for wrapping a Bus that expects one address type to make it
-/// appear instead as a Bus for another address type, as long as a conversion
-/// is available from the "outer" address type to the "inner" address type.
-pub struct AddressConverter<Outside, Inside, Wrapped>
-where
-    Outside: core::convert::TryInto<Inside>,
-    Wrapped: Bus<Inside>,
-{
-    wrapped: Wrapped,
-    phantom_outside: core::marker::PhantomData<Outside>,
-    phantom_inside: core::marker::PhantomData<Inside>,
-}
-
-impl<Outside, Inside, Wrapped> AddressConverter<Outside, Inside, Wrapped>
-where
-    Outside: core::convert::TryInto<Inside>,
-    Wrapped: Bus<Inside>,
-{
-
-    // Consumes a bus and produces a wrapping `AddressConverter` that will
-    // convert incoming addresses to the given bus's address type.
-    //
-    // This can be useful, for example, to adapt a `Memory` instance (whose
-    // address type is always `usize`) to the address size used by a specific
-    // instantiation of `CPU`, such as `u32` for rv32 or `u64` for rv64.
-    //
-    // The signature of this function does not imply the "outside" type for
-    // the address converter. To specify the outside type, assign the result
-    // to something that implements `Bus` with the desired address type.
-    pub fn new(wrapped: Wrapped) -> Self {
-        Self {
-            wrapped: wrapped,
-            phantom_outside: core::marker::PhantomData,
-            phantom_inside: core::marker::PhantomData,
-        }
-    }
-
-    pub fn convert_address(&self, addr: Outside) -> Option<Inside> {
-        match addr.try_into() {
-            Ok(in_addr) => Some(in_addr),
-            Err(_) => None,
-        }
-    }
-}
-
-impl<Outside, Inside, Wrapped> Bus<Outside> for AddressConverter<Outside, Inside, Wrapped>
-where
-    Outside: core::convert::TryInto<Inside>,
-    Wrapped: Bus<Inside>,
-{
-
-    fn read_byte(&mut self, addr: Outside) -> Result<Byte, MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.read_byte(addr),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn read_halfword(&mut self, addr: Outside) -> Result<Halfword, MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.read_halfword(addr),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn read_word(&mut self, addr: Outside) -> Result<Word, MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.read_word(addr),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn read_doubleword(&mut self, addr: Outside) -> Result<Doubleword, MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.read_doubleword(addr),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn read_quadword(&mut self, addr: Outside) -> Result<Quadword, MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.read_quadword(addr),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn write_byte(&mut self, addr: Outside, data: Byte) -> Result<(), MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.write_byte(addr, data),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn write_halfword(&mut self, addr: Outside, data: Halfword) -> Result<(), MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.write_halfword(addr, data),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn write_word(&mut self, addr: Outside, data: Word) -> Result<(), MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.write_word(addr, data),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn write_doubleword(&mut self, addr: Outside, data: Doubleword) -> Result<(), MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.write_doubleword(addr, data),
-            None => Err(MemoryError::PageFault),
-        }
-    }
-
-    fn write_quadword(&mut self, addr: Outside, data: Quadword) -> Result<(), MemoryError> {
-        match self.convert_address(addr) {
-            Some(addr) => self.wrapped.write_quadword(addr, data),
-            None => Err(MemoryError::PageFault),
-        }
+        bus.write_byte(1, 0xfe).unwrap();
+        assert_eq!(bus.read_byte(1).unwrap(), 0xfe as u8);
     }
 }
