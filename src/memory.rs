@@ -279,7 +279,7 @@ mod tests {
 /// is available from the "outer" address type to the "inner" address type.
 pub struct AddressConverter<Outside, Inside, Wrapped>
 where
-    Outside: core::convert::Into<Inside>, // FIXME: Should use TryInto so that u64 -> usize can fail dynamically on 32-bit targets
+    Outside: core::convert::TryInto<Inside>,
     Wrapped: Bus<Inside>,
 {
     wrapped: Wrapped,
@@ -289,7 +289,7 @@ where
 
 impl<Outside, Inside, Wrapped> AddressConverter<Outside, Inside, Wrapped>
 where
-    Outside: core::convert::Into<Inside>,
+    Outside: core::convert::TryInto<Inside>,
     Wrapped: Bus<Inside>,
 {
 
@@ -310,51 +310,88 @@ where
             phantom_inside: core::marker::PhantomData,
         }
     }
+
+    pub fn convert_address(&self, addr: Outside) -> Option<Inside> {
+        match addr.try_into() {
+            Ok(in_addr) => Some(in_addr),
+            Err(_) => None,
+        }
+    }
 }
 
 impl<Outside, Inside, Wrapped> Bus<Outside> for AddressConverter<Outside, Inside, Wrapped>
 where
-    Outside: core::convert::Into<Inside>,
+    Outside: core::convert::TryInto<Inside>,
     Wrapped: Bus<Inside>,
 {
 
     fn read_byte(&mut self, addr: Outside) -> Result<Byte, MemoryError> {
-        return self.wrapped.read_byte(addr.into());
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_byte(addr),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn read_halfword(&mut self, addr: Outside) -> Result<Halfword, MemoryError> {
-        return self.wrapped.read_halfword(addr.into());
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_halfword(addr),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn read_word(&mut self, addr: Outside) -> Result<Word, MemoryError> {
-        return self.wrapped.read_word(addr.into());
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_word(addr),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn read_doubleword(&mut self, addr: Outside) -> Result<Doubleword, MemoryError> {
-        return self.wrapped.read_doubleword(addr.into());
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_doubleword(addr),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn read_quadword(&mut self, addr: Outside) -> Result<Quadword, MemoryError> {
-        return self.wrapped.read_quadword(addr.into());
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.read_quadword(addr),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn write_byte(&mut self, addr: Outside, data: Byte) -> Result<(), MemoryError> {
-        return self.wrapped.write_byte(addr.into(), data);
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_byte(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn write_halfword(&mut self, addr: Outside, data: Halfword) -> Result<(), MemoryError> {
-        return self.wrapped.write_halfword(addr.into(), data);
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_halfword(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn write_word(&mut self, addr: Outside, data: Word) -> Result<(), MemoryError> {
-        return self.wrapped.write_word(addr.into(), data);
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_word(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn write_doubleword(&mut self, addr: Outside, data: Doubleword) -> Result<(), MemoryError> {
-        return self.wrapped.write_doubleword(addr.into(), data);
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_doubleword(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
     }
 
     fn write_quadword(&mut self, addr: Outside, data: Quadword) -> Result<(), MemoryError> {
-        return self.wrapped.write_quadword(addr.into(), data);
+        match self.convert_address(addr) {
+            Some(addr) => self.wrapped.write_quadword(addr, data),
+            None => Err(MemoryError::PageFault),
+        }
     }
 }
