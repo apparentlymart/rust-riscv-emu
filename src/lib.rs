@@ -7,5 +7,5 @@ mod memory;
 mod register;
 
 pub use cpu::CPU;
-pub use memory::{Bus, Memory};
+pub use memory::{AddressConverter, Bus, Memory};
 pub use register::Register;
