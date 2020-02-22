@@ -1,6 +1,6 @@
 use crate::data::{IntBits, IntValue};
 use crate::memory::Bus;
-use crate::register::{Register, Registers};
+use crate::register::{IntRegister, Registers};
 
 pub struct CPU<XL, Addr, Mem>
 where
@@ -19,7 +19,6 @@ where
     Addr: IntValue,
     Mem: Bus<Addr>,
 {
-
     pub fn new(memory: Mem) -> Self {
         Self {
             memory: memory,
@@ -28,13 +27,11 @@ where
         }
     }
 
-    pub fn read_register(&self, reg: Register) -> XL {
-        self.registers.read(reg)
+    pub fn read_int_register(&self, reg: IntRegister) -> XL {
+        self.registers.read_int(reg)
     }
 
-
-    pub fn write_register(&mut self, reg: Register, v: XL) {
-        self.registers.write(reg, v)
+    pub fn write_int_register(&mut self, reg: IntRegister, v: XL) {
+        self.registers.write_int(reg, v)
     }
-
 }

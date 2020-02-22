@@ -1,6 +1,5 @@
-
 use crate::data::{IntBits, IntValue};
-use crate::register::Register;
+use crate::register::IntRegister;
 /// Represents a raw instruction value that hasn't been decoded yet.
 pub type RawInstruction = u32;
 
@@ -10,9 +9,9 @@ pub type RawInstructionCompressed = u16;
 
 trait RawInstructionParts {
     fn opcode(self) -> u8;
-    fn rd(self) -> Register;
-    fn rs1(self) -> Register;
-    fn rs2(self) -> Register;
+    fn rd(self) -> IntRegister;
+    fn rs1(self) -> IntRegister;
+    fn rs2(self) -> IntRegister;
     fn funct3(self) -> u8;
     fn funct7(self) -> u8;
 }
@@ -22,16 +21,16 @@ impl RawInstructionParts for RawInstruction {
         ((self >> 0) & 0b1111111) as u8
     }
 
-    fn rd(self) -> Register {
-        Register::num(((self >> 7) & 0b11111) as usize)
+    fn rd(self) -> IntRegister {
+        IntRegister::num(((self >> 7) & 0b11111) as usize)
     }
 
-    fn rs1(self) -> Register {
-        Register::num(((self >> 15) & 0b11111) as usize)
+    fn rs1(self) -> IntRegister {
+        IntRegister::num(((self >> 15) & 0b11111) as usize)
     }
 
-    fn rs2(self) -> Register {
-        Register::num(((self >> 20) & 0b11111) as usize)
+    fn rs2(self) -> IntRegister {
+        IntRegister::num(((self >> 20) & 0b11111) as usize)
     }
 
     fn funct3(self) -> u8 {
@@ -50,10 +49,10 @@ impl RawInstructionParts for RawInstruction {
 #[derive(Debug)]
 pub struct Instruction<Imm: IntBits> {
     opcode: u8,
-    rd: Register,
+    rd: IntRegister,
     funct3: u8,
-    rs1: Register,
-    rs2: Register,
+    rs1: IntRegister,
+    rs2: IntRegister,
     funct7: u8,
     imm: Imm,
 }
@@ -78,7 +77,7 @@ impl<Imm: IntBits> Instruction<Imm> {
             rd: raw.rd(),
             funct3: raw.funct3(),
             rs1: raw.rs1(),
-            rs2: Register::zero(),
+            rs2: IntRegister::zero(),
             funct7: 0,
 
             // raw contains bits 0 through 11, which we must sign-extend to
@@ -90,7 +89,7 @@ impl<Imm: IntBits> Instruction<Imm> {
     pub fn s_type(raw: RawInstruction) -> Self {
         Self {
             opcode: raw.opcode(),
-            rd: Register::zero(),
+            rd: IntRegister::zero(),
             funct3: raw.funct3(),
             rs1: raw.rs1(),
             rs2: raw.rs2(),
@@ -108,8 +107,8 @@ impl<Imm: IntBits> Instruction<Imm> {
             opcode: raw.opcode(),
             rd: raw.rd(),
             funct3: 0,
-            rs1: Register::zero(),
-            rs2: Register::zero(),
+            rs1: IntRegister::zero(),
+            rs2: IntRegister::zero(),
             funct7: 0,
 
             // raw contains bits 12 through 31, with the first 12 bits taken
@@ -134,7 +133,7 @@ impl<Imm: IntBits> PartialEq for Instruction<Imm> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Instruction, IntBits, Register};
+    use super::{Instruction, IntBits, IntRegister};
 
     #[test]
     fn decode_r_type() {
@@ -143,10 +142,10 @@ mod tests {
             ins,
             Instruction {
                 opcode: 1,
-                rd: Register::num(2),
+                rd: IntRegister::num(2),
                 funct3: 4,
-                rs1: Register::num(8),
-                rs2: Register::num(16),
+                rs1: IntRegister::num(8),
+                rs2: IntRegister::num(16),
                 funct7: 32,
                 imm: 0,
             }
@@ -160,10 +159,10 @@ mod tests {
             ins,
             Instruction {
                 opcode: 1,
-                rd: Register::num(2),
+                rd: IntRegister::num(2),
                 funct3: 4,
-                rs1: Register::num(16),
-                rs2: Register::num(0),
+                rs1: IntRegister::num(16),
+                rs2: IntRegister::num(0),
                 funct7: 0,
                 imm: IntBits::from_signed(-1 as i32),
             }
@@ -177,10 +176,10 @@ mod tests {
             ins,
             Instruction {
                 opcode: 1,
-                rd: Register::num(0),
+                rd: IntRegister::num(0),
                 funct3: 4,
-                rs1: Register::num(8),
-                rs2: Register::num(16),
+                rs1: IntRegister::num(8),
+                rs2: IntRegister::num(16),
                 funct7: 0,
                 imm: IntBits::from_signed(-2 as i32),
             }
@@ -194,10 +193,10 @@ mod tests {
             ins,
             Instruction {
                 opcode: 5,
-                rd: Register::num(30),
+                rd: IntRegister::num(30),
                 funct3: 0,
-                rs1: Register::zero(),
-                rs2: Register::zero(),
+                rs1: IntRegister::zero(),
+                rs2: IntRegister::zero(),
                 funct7: 0,
                 imm: IntBits::from_signed(-4096 as i32),
             }

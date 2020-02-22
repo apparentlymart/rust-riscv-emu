@@ -1,9 +1,15 @@
+use crate::data::IntBits;
 use core::fmt;
-use crate::data::{IntBits};
 
-pub struct Register(usize);
+pub enum Register {
+    Int(IntRegister),
+    Float(FloatRegister),
+    ControlStatus(ControlStatusRegister),
+}
 
-impl Register {
+pub struct IntRegister(usize);
+
+impl IntRegister {
     pub fn num(n: usize) -> Self {
         if n > 31 {
             panic!("register number out of range (0-31 inclusive)");
@@ -16,38 +22,105 @@ impl Register {
     }
 }
 
-impl PartialEq for Register {
+impl PartialEq for IntRegister {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
 
-impl fmt::Debug for Register {
+impl fmt::Debug for IntRegister {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Register({})", self.0)
+        write!(f, "IntRegister({})", self.0)
     }
 }
 
-pub struct Registers<XL: IntBits>([XL; 32]);
+impl core::convert::From<IntRegister> for Register {
+    fn from(ir: IntRegister) -> Register {
+        Register::Int(ir)
+    }
+}
+
+pub struct FloatRegister(usize);
+
+impl FloatRegister {
+    pub fn num(n: usize) -> Self {
+        if n > 31 {
+            panic!("float register number out of range (0-31 inclusive)");
+        }
+        return Self(n);
+    }
+}
+
+impl PartialEq for FloatRegister {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl fmt::Debug for FloatRegister {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "FloatRegister({})", self.0)
+    }
+}
+
+impl core::convert::From<FloatRegister> for Register {
+    fn from(fr: FloatRegister) -> Register {
+        Register::Float(fr)
+    }
+}
+
+pub struct ControlStatusRegister(usize);
+
+impl ControlStatusRegister {
+    pub fn num(n: usize) -> Self {
+        if n >= 4096 {
+            panic!("CSR number out of range (0-4095 inclusive)");
+        }
+        return Self(n);
+    }
+}
+
+impl PartialEq for ControlStatusRegister {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl fmt::Debug for ControlStatusRegister {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ControlStatusRegister({})", self.0)
+    }
+}
+
+impl core::convert::From<ControlStatusRegister> for Register {
+    fn from(csr: ControlStatusRegister) -> Register {
+        Register::ControlStatus(csr)
+    }
+}
+
+pub struct Registers<XL: IntBits> {
+    int: [XL; 32],
+}
 
 impl<XL: IntBits> Registers<XL> {
     pub fn new() -> Self {
-        Self([XL::zero(); 32])
+        Self {
+            int: [XL::zero(); 32],
+        }
     }
 
-    pub fn read(&self, reg: Register) -> XL {
+    pub fn read_int(&self, reg: IntRegister) -> XL {
         if reg.0 == 0 {
             // Register zero always returns zero.
             return XL::zero();
         }
-        self.0[reg.0]
+        self.int[reg.0]
     }
 
-    pub fn write(&mut self, reg: Register, v: XL) {
+    pub fn write_int(&mut self, reg: IntRegister, v: XL) {
         if reg.0 == 0 {
             // Writing to register zero is always a no-op.
         }
-        self.0[reg.0] = v
+        self.int[reg.0] = v
     }
 }
-
