@@ -1,5 +1,39 @@
 use crate::data::{IntBits, IntValue};
 use crate::register::IntRegister;
+
+// Given the low-order halfword for a RISC-V instruction, returns the total
+// length of that instruction in bytes by interpreting only the instruction
+// size scheme.
+//
+// If the given data is not actually from a RISC-V instruction then the result
+// is undefined. The length encoding mechanism uses 16-bit "parcels", so
+// in practice the result will always be an even number.
+//
+// As a special case, the result zero indicates an invalid encoding. Currently
+// that result will appear only for an instruction that seems to be using
+// the reserved extension for instructions >= 192 bits, which is not
+// supported by this implementation due to it being undefined at the time of
+// writing.
+pub fn instruction_length(low_parcel: u16) -> usize {
+    if low_parcel & 0b11 != 0b11 {
+        return 2;
+    }
+    if low_parcel & 0b11111 != 0b11111 {
+        return 4;
+    }
+    if low_parcel & 0b111111 == 0b011111 {
+        return 6;
+    }
+    if low_parcel & 0b1111111 == 0b0111111 {
+        return 8;
+    }
+    if low_parcel & 0b1111111 == 0b1111111 && low_parcel & 0b111000000000000 != 0b111000000000000 {
+        let n = (low_parcel >> 12 & 0b111) as usize;
+        return 10 + n * 2;
+    }
+    return 0;
+}
+
 /// Represents a raw instruction value that hasn't been decoded yet.
 pub type RawInstruction = u32;
 
@@ -134,6 +168,26 @@ impl<Imm: IntBits> PartialEq for Instruction<Imm> {
 #[cfg(test)]
 mod tests {
     use super::{Instruction, IntBits, IntRegister};
+
+    #[test]
+    fn instruction_length() {
+        assert_eq!(super::instruction_length(0b0000000000000000), 2);
+        assert_eq!(super::instruction_length(0b0000000000000001), 2);
+        assert_eq!(super::instruction_length(0b0000000000000010), 2);
+        assert_eq!(super::instruction_length(0b0000000000000110), 2);
+        assert_eq!(super::instruction_length(0b0000000000000011), 4);
+        assert_eq!(super::instruction_length(0b0000000000000111), 4);
+        assert_eq!(super::instruction_length(0b0000000000011111), 6);
+        assert_eq!(super::instruction_length(0b0000000000111111), 8);
+        assert_eq!(super::instruction_length(0b0000000001111111), 10);
+        assert_eq!(super::instruction_length(0b0001000001111111), 12);
+        assert_eq!(super::instruction_length(0b0010000001111111), 14);
+        assert_eq!(super::instruction_length(0b0011000001111111), 16);
+        assert_eq!(super::instruction_length(0b0100000001111111), 18);
+        assert_eq!(super::instruction_length(0b0101000001111111), 20);
+        assert_eq!(super::instruction_length(0b0110000001111111), 22);
+        assert_eq!(super::instruction_length(0b0111000001111111), 0); // reserved for future expansion
+    }
 
     #[test]
     fn decode_r_type() {
