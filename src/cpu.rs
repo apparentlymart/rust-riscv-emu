@@ -1,10 +1,10 @@
-use crate::data::{IntBits, IntValue};
+use crate::data::{IntValueRaw, IntValue};
 use crate::memory::Bus;
 use crate::register::{IntRegister, Registers};
 
 pub struct CPU<XL, Addr, Mem>
 where
-    XL: IntBits<Address = Addr>,
+    XL: IntValueRaw<Address = Addr>,
     Addr: IntValue,
     Mem: Bus<Addr>,
 {
@@ -15,7 +15,7 @@ where
 
 impl<XL, Addr, Mem> CPU<XL, Addr, Mem>
 where
-    XL: IntBits<Address = Addr>,
+    XL: IntValueRaw<Address = Addr>,
     Addr: IntValue,
     Mem: Bus<Addr>,
 {

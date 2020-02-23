@@ -1,4 +1,4 @@
-use crate::data::{IntBits, IntValue};
+use crate::data::{IntValueRaw, IntValue};
 use crate::register::IntRegister;
 
 // Given the low-order halfword for a RISC-V instruction, returns the total
@@ -81,7 +81,7 @@ impl RawInstructionParts for RawInstruction {
 /// The meaning and validity of the fields in an `Instruction` value depend on
 /// the value of `opcode`
 #[derive(Debug)]
-pub struct Instruction<Imm: IntBits> {
+pub struct Instruction<Imm: IntValueRaw> {
     opcode: u8,
     rd: IntRegister,
     funct3: u8,
@@ -91,7 +91,7 @@ pub struct Instruction<Imm: IntBits> {
     imm: Imm,
 }
 
-impl<Imm: IntBits> Instruction<Imm> {
+impl<Imm: IntValueRaw> Instruction<Imm> {
     /// Decodes the given raw instruction as an "R-type" instruction.
     pub fn r_type(raw: RawInstruction) -> Self {
         Self {
@@ -153,7 +153,7 @@ impl<Imm: IntBits> Instruction<Imm> {
     }
 }
 
-impl<Imm: IntBits> PartialEq for Instruction<Imm> {
+impl<Imm: IntValueRaw> PartialEq for Instruction<Imm> {
     fn eq(&self, other: &Self) -> bool {
         (self.opcode == other.opcode
             && self.rd == other.rd
@@ -167,7 +167,7 @@ impl<Imm: IntBits> PartialEq for Instruction<Imm> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Instruction, IntBits, IntRegister};
+    use super::{Instruction, IntValueRaw, IntRegister};
 
     #[test]
     fn instruction_length() {
@@ -218,7 +218,7 @@ mod tests {
                 rs1: IntRegister::num(16),
                 rs2: IntRegister::num(0),
                 funct7: 0,
-                imm: IntBits::from_signed(-1 as i32),
+                imm: IntValueRaw::from_signed(-1 as i32),
             }
         );
     }
@@ -235,7 +235,7 @@ mod tests {
                 rs1: IntRegister::num(8),
                 rs2: IntRegister::num(16),
                 funct7: 0,
-                imm: IntBits::from_signed(-2 as i32),
+                imm: IntValueRaw::from_signed(-2 as i32),
             }
         );
     }
@@ -252,7 +252,7 @@ mod tests {
                 rs1: IntRegister::zero(),
                 rs2: IntRegister::zero(),
                 funct7: 0,
-                imm: IntBits::from_signed(-4096 as i32),
+                imm: IntValueRaw::from_signed(-4096 as i32),
             }
         );
     }

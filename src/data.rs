@@ -48,7 +48,7 @@ where
 // At the time of writing, the RV128I base ISA is reserved for future expansion
 // and not fully specified, so its implementation in this library may not be
 // fully compliant with the subsequent specification, once written.
-pub trait IntBits: IntValue {
+pub trait IntValueRaw: IntValue {
     type Address: IntValue;
     type Unsigned: IntValue;
     type Signed: IntValue;
@@ -75,7 +75,7 @@ macro_rules! int_value_impl {
             }
         }
 
-        impl IntBits for $unsigned {
+        impl IntValueRaw for $unsigned {
 
             type Address = $unsigned;
             type Signed = $signed;

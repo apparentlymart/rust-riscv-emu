@@ -1,4 +1,4 @@
-use crate::data::IntBits;
+use crate::data::IntValueRaw;
 use core::fmt;
 
 pub enum Register {
@@ -98,11 +98,11 @@ impl core::convert::From<ControlStatusRegister> for Register {
     }
 }
 
-pub struct Registers<XL: IntBits> {
+pub struct Registers<XL: IntValueRaw> {
     int: [XL; 32],
 }
 
-impl<XL: IntBits> Registers<XL> {
+impl<XL: IntValueRaw> Registers<XL> {
     pub fn new() -> Self {
         Self {
             int: [XL::zero(); 32],
