@@ -5,13 +5,13 @@ use core::ops;
 // implement a base integer instruction set of some specific XLEN.
 //
 // This includes both signed and unsigned types, with behavior depending on
-// signedness. The trait `IntBits` represents a set of bits of a particular
+// signedness. The trait `IntValueRaw` represents a set of bits of a particular
 // XLEN that can be interpreted as either signed or unsigned, producing
 // a suitable `IntValue` of that same number of bits.
 //
-// See `IntBits` for information on how specific unsigned integer types select
-// a particular base ISA for a CPU, which then in turn selects both the signed
-// and unsigned IntValue types for that CPU.
+// See `IntValueRaw` for information on how specific unsigned integer types
+// select a particular base ISA for a CPU, which then in turn selects both the
+// signed and unsigned IntValue types for that CPU.
 pub trait IntValue
 where
     Self: Copy
@@ -25,6 +25,18 @@ where
         + ops::BitXor
         + ops::Shl<usize>
         + ops::Shr<usize>,
+{
+    type Raw;
+
+    fn zero() -> Self;
+}
+
+// Trait implemented by types that can support the operations needed to
+// implement one of the RISC-V floating-point extensions for a particular
+// precision of float.
+pub trait FloatValue
+where
+    Self: Copy + PartialEq + ops::Add + ops::Sub + ops::Mul + ops::Div,
 {
     fn zero() -> Self;
 }
@@ -64,12 +76,16 @@ pub trait IntValueRaw: IntValue {
 macro_rules! int_value_impl {
     ($unsigned:ty, $signed:ty) => {
         impl IntValue for $unsigned {
+            type Raw = $unsigned;
+
             fn zero() -> Self {
                 return 0;
             }
         }
 
         impl IntValue for $signed {
+            type Raw = $unsigned;
+
             fn zero() -> Self {
                 return 0;
             }
@@ -123,3 +139,16 @@ macro_rules! int_value_impl {
 int_value_impl!(u32, i32);
 int_value_impl!(u64, i64);
 int_value_impl!(u128, i128);
+
+macro_rules! float_value_impl {
+    ($underlying:ty) => {
+        impl FloatValue for $underlying {
+            fn zero() -> Self {
+                return 0.0;
+            }
+        }
+    };
+}
+
+float_value_impl!(f32);
+float_value_impl!(f64);
