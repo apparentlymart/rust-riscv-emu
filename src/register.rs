@@ -1,4 +1,4 @@
-use crate::data::IntValueRaw;
+use crate::data::Int;
 use core::fmt;
 
 pub enum Register {
@@ -106,11 +106,11 @@ pub enum CSRError {
     AccessFault,
 }
 
-pub struct Registers<XL: IntValueRaw> {
+pub struct Registers<XL: Int> {
     int: [XL; 32],
 }
 
-impl<XL: IntValueRaw> Registers<XL> {
+impl<XL: Int> Registers<XL> {
     pub fn new() -> Self {
         Self {
             int: [XL::zero(); 32],

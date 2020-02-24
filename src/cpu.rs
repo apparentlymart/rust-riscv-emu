@@ -1,37 +1,35 @@
-use crate::data::{IntValueRaw, IntValue};
+use crate::data::Int;
 use crate::memory::Bus;
 use crate::register::{IntRegister, Registers};
 
-pub struct CPU<XL, Addr, Mem>
+pub struct CPU<IntData, Mem>
 where
-    XL: IntValueRaw<Address = Addr>,
-    Addr: IntValue,
-    Mem: Bus<Addr>,
+    IntData: Int,
+    Mem: Bus<IntData>,
 {
     memory: Mem,
-    registers: Registers<XL>,
-    pc: XL,
+    registers: Registers<IntData>,
+    pc: IntData,
 }
 
-impl<XL, Addr, Mem> CPU<XL, Addr, Mem>
+impl<IntData, Mem> CPU<IntData, Mem>
 where
-    XL: IntValueRaw<Address = Addr>,
-    Addr: IntValue,
-    Mem: Bus<Addr>,
+    IntData: Int,
+    Mem: Bus<IntData>,
 {
     pub fn new(memory: Mem) -> Self {
         Self {
             memory: memory,
             registers: Registers::new(),
-            pc: XL::zero(),
+            pc: IntData::zero(),
         }
     }
 
-    pub fn read_int_register(&self, reg: IntRegister) -> XL {
+    pub fn read_int_register(&self, reg: IntRegister) -> IntData {
         self.registers.read_int(reg)
     }
 
-    pub fn write_int_register(&mut self, reg: IntRegister, v: XL) {
+    pub fn write_int_register(&mut self, reg: IntRegister, v: IntData) {
         self.registers.write_int(reg, v)
     }
 }

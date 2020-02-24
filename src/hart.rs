@@ -1,4 +1,3 @@
-use crate::data::{FloatValue, IntValueRaw};
 use crate::exception::ExceptionCause;
 use crate::memory::Bus;
 use crate::register::{CSRError, ControlStatusRegister, FloatRegister, IntRegister};

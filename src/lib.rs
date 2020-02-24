@@ -10,6 +10,10 @@ mod raw_instruction;
 mod register;
 
 pub use cpu::CPU;
+pub use data::Byte;
+pub use data::{Float, Int};
+pub use data::{HalfwordSigned, LongwordSigned, QuadwordSigned, WordSigned};
+pub use data::{HalfwordUnsigned, LongwordUnsigned, QuadwordUnsigned, WordUnsigned};
 pub use exception::{Cause, ExceptionCause, InterruptCause};
 pub use hart::Hart;
 pub use instruction::{Instruction, Operation};

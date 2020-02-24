@@ -1,14 +1,13 @@
-
-pub type Word = u32;
-pub type Halfword = u16;
-pub type Doubleword = u64;
-pub type Quadword = u128;
-pub type Byte = u8;
+use crate::data::Byte;
+use crate::data::HalfwordUnsigned as Halfword;
+use crate::data::LongwordUnsigned as Longword;
+use crate::data::QuadwordUnsigned as Quadword;
+use crate::data::WordUnsigned as Word;
 
 /// Represents the external memory bus of the CPU.
 ///
 /// The CPU may access memory as either individual bytes, words, halfwords,
-/// doublewords, or quadwords. Implementations of this trait can map
+/// Longwords, or quadwords. Implementations of this trait can map
 /// memory access requests onto raw host memory buffers (to simulate RAM or ROM)
 /// or to simulated registers of an emulated memory-mapped IO device.
 ///
@@ -21,8 +20,8 @@ pub trait Bus<Addr> {
     fn write_word(&mut self, addr: Addr, data: Word) -> Result<(), MemoryError>;
     fn read_halfword(&mut self, addr: Addr) -> Result<Halfword, MemoryError>;
     fn write_halfword(&mut self, addr: Addr, data: Halfword) -> Result<(), MemoryError>;
-    fn read_doubleword(&mut self, addr: Addr) -> Result<Doubleword, MemoryError>;
-    fn write_doubleword(&mut self, addr: Addr, data: Doubleword) -> Result<(), MemoryError>;
+    fn read_longword(&mut self, addr: Addr) -> Result<Longword, MemoryError>;
+    fn write_longword(&mut self, addr: Addr, data: Longword) -> Result<(), MemoryError>;
     fn read_quadword(&mut self, addr: Addr) -> Result<Quadword, MemoryError>;
     fn write_quadword(&mut self, addr: Addr, data: Quadword) -> Result<(), MemoryError>;
 }
@@ -119,15 +118,15 @@ impl<'b> Bus<usize> for Memory<'b> {
         return Ok(());
     }
 
-    fn read_doubleword(&mut self, addr: usize) -> Result<Doubleword, MemoryError> {
-        let mut ret: Doubleword = 0;
+    fn read_longword(&mut self, addr: usize) -> Result<Longword, MemoryError> {
+        let mut ret: Longword = 0;
         for s in 0..8 {
-            ret = ret | ((self.buf[(addr + s) % self.buf.len()] as Doubleword) << (s * 8))
+            ret = ret | ((self.buf[(addr + s) % self.buf.len()] as Longword) << (s * 8))
         }
         return Ok(ret);
     }
 
-    fn write_doubleword(&mut self, addr: usize, data: Doubleword) -> Result<(), MemoryError> {
+    fn write_longword(&mut self, addr: usize, data: Longword) -> Result<(), MemoryError> {
         if !self.writable {
             return Err(MemoryError::AccessFault);
         }
@@ -162,7 +161,6 @@ impl<'b> Bus<usize> for Memory<'b> {
         }
         return Ok(());
     }
-
 }
 
 /// Adapter type for wrapping a Bus that expects one address type to make it
@@ -183,7 +181,6 @@ where
     Outside: core::convert::TryInto<Inside>,
     Wrapped: Bus<Inside>,
 {
-
     // Consumes a bus and produces a wrapping `AddressConverter` that will
     // convert incoming addresses to the given bus's address type.
     //
@@ -215,7 +212,6 @@ where
     Outside: core::convert::TryInto<Inside>,
     Wrapped: Bus<Inside>,
 {
-
     fn read_byte(&mut self, addr: Outside) -> Result<Byte, MemoryError> {
         match self.convert_address(addr) {
             Some(addr) => self.wrapped.read_byte(addr),
@@ -237,9 +233,9 @@ where
         }
     }
 
-    fn read_doubleword(&mut self, addr: Outside) -> Result<Doubleword, MemoryError> {
+    fn read_longword(&mut self, addr: Outside) -> Result<Longword, MemoryError> {
         match self.convert_address(addr) {
-            Some(addr) => self.wrapped.read_doubleword(addr),
+            Some(addr) => self.wrapped.read_longword(addr),
             None => Err(MemoryError::PageFault),
         }
     }
@@ -272,9 +268,9 @@ where
         }
     }
 
-    fn write_doubleword(&mut self, addr: Outside, data: Doubleword) -> Result<(), MemoryError> {
+    fn write_longword(&mut self, addr: Outside, data: Longword) -> Result<(), MemoryError> {
         match self.convert_address(addr) {
-            Some(addr) => self.wrapped.write_doubleword(addr, data),
+            Some(addr) => self.wrapped.write_longword(addr, data),
             None => Err(MemoryError::PageFault),
         }
     }
@@ -300,14 +296,14 @@ mod tests {
         assert_eq!(ram.read_byte(0).unwrap(), 0 as u8);
         assert_eq!(ram.read_halfword(0).unwrap(), 0 as u16);
         assert_eq!(ram.read_word(0).unwrap(), 0 as u32);
-        assert_eq!(ram.read_doubleword(0).unwrap(), 0 as u64);
+        assert_eq!(ram.read_longword(0).unwrap(), 0 as u64);
         assert_eq!(ram.read_quadword(0).unwrap(), 0 as u128);
 
         // Can also do unaligned reads.
         assert_eq!(ram.read_byte(1).unwrap(), 0 as u8);
         assert_eq!(ram.read_halfword(1).unwrap(), 0 as u16);
         assert_eq!(ram.read_word(1).unwrap(), 0 as u32);
-        assert_eq!(ram.read_doubleword(1).unwrap(), 0 as u64);
+        assert_eq!(ram.read_longword(1).unwrap(), 0 as u64);
         assert_eq!(ram.read_quadword(1).unwrap(), 0 as u128);
 
         // We'll write a quadword into location zero and then reinterpret its
@@ -320,7 +316,7 @@ mod tests {
         assert_eq!(ram.read_halfword(0).unwrap(), 0x0f_10 as u16);
         assert_eq!(ram.read_word(0).unwrap(), 0x0d_0e_0f_10 as u32);
         assert_eq!(
-            ram.read_doubleword(0).unwrap(),
+            ram.read_longword(0).unwrap(),
             0x09_0a_0b_0c_0d_0e_0f_10 as u64
         );
         assert_eq!(
@@ -333,7 +329,7 @@ mod tests {
         assert_eq!(ram.read_halfword(0).unwrap(), 0x0f_ff as u16);
         assert_eq!(ram.read_word(0).unwrap(), 0x0d_0e_0f_ff as u32);
         assert_eq!(
-            ram.read_doubleword(0).unwrap(),
+            ram.read_longword(0).unwrap(),
             0x09_0a_0b_0c_0d_0e_0f_ff as u64
         );
         assert_eq!(
@@ -346,7 +342,7 @@ mod tests {
         assert_eq!(ram.read_halfword(0).unwrap(), 0xbe_ef as u16);
         assert_eq!(ram.read_word(0).unwrap(), 0x0d_0e_be_ef as u32);
         assert_eq!(
-            ram.read_doubleword(0).unwrap(),
+            ram.read_longword(0).unwrap(),
             0x09_0a_0b_0c_0d_0e_be_ef as u64
         );
         assert_eq!(
@@ -359,7 +355,7 @@ mod tests {
         assert_eq!(ram.read_halfword(0).unwrap(), 0xbe_ef as u16);
         assert_eq!(ram.read_word(0).unwrap(), 0xde_ad_be_ef as u32);
         assert_eq!(
-            ram.read_doubleword(0).unwrap(),
+            ram.read_longword(0).unwrap(),
             0x09_0a_0b_0c_de_ad_be_ef as u64
         );
         assert_eq!(
@@ -367,12 +363,12 @@ mod tests {
             0x01_02_03_04_05_06_07_08_09_0a_0b_0c_de_ad_be_ef as u128
         );
 
-        ram.write_doubleword(0, 0xfeedfacecafebeef).unwrap();
+        ram.write_longword(0, 0xfeedfacecafebeef).unwrap();
         assert_eq!(ram.read_byte(0).unwrap(), 0xef as u8);
         assert_eq!(ram.read_halfword(0).unwrap(), 0xbe_ef as u16);
         assert_eq!(ram.read_word(0).unwrap(), 0xca_fe_be_ef as u32);
         assert_eq!(
-            ram.read_doubleword(0).unwrap(),
+            ram.read_longword(0).unwrap(),
             0xfe_ed_fa_ce_ca_fe_be_ef as u64
         );
         assert_eq!(
@@ -385,7 +381,7 @@ mod tests {
         assert_eq!(ram.read_halfword(1).unwrap(), 0xfe_be as u16);
         assert_eq!(ram.read_word(1).unwrap(), 0xce_ca_fe_be as u32);
         assert_eq!(
-            ram.read_doubleword(1).unwrap(),
+            ram.read_longword(1).unwrap(),
             0x08_fe_ed_fa_ce_ca_fe_be as u64
         );
         assert_eq!(

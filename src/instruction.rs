@@ -1,4 +1,3 @@
-use crate::data::{IntValue, IntValueRaw};
 use crate::raw_instruction::RawInstruction;
 use crate::register::FloatRegister;
 use crate::register::IntRegister;
