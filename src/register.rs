@@ -98,6 +98,14 @@ impl core::convert::From<ControlStatusRegister> for Register {
     }
 }
 
+/// Represents the ways in which a CSR can fail.
+#[derive(Debug)]
+pub enum CSRError {
+    Unsupported,
+    Misaligned,
+    AccessFault,
+}
+
 pub struct Registers<XL: IntValueRaw> {
     int: [XL; 32],
 }

@@ -1,8 +1,6 @@
-
 /// Represents the exception cause codes from the RISC-V machine ISA, as would
 /// be written to the `mcause` CSR.
 pub enum ExceptionCause {
-    // Non-interrupt causes
     InstructionAddressMisaligned = 0,
     InstructionAccessFault = 1,
     IllegalInstruction = 2,
@@ -17,15 +15,23 @@ pub enum ExceptionCause {
     InstructionPageFault = 12,
     LoadPageFault = 13,
     StorePageFault = 15,
+}
 
-    // Interrupt causes (these all have the MSB set)
-    SoftwareInterruptFromUser = (1 << 31) | 0,
-    SoftwareInterruptFromSupervisor = (1 << 31) | 1,
-    SoftwareInterruptFromMachine = (1 << 31) | 3,
-    TimerInterruptFromUser = (1 << 31) | 4,
-    TimerInterruptFromSupervisor = (1 << 31) | 5,
-    TimerInterruptFromMachine = (1 << 31) | 7,
-    ExternalInterruptFromUser = (1 << 31) | 8,
-    ExternalInterruptFromSupervisor = (1 << 31) | 9,
-    ExternalInterruptFromMachine = (1 << 31) | 11,
+/// Represents the interrupt cause codes from the RISC-V machine ISA.
+pub enum InterruptCause {
+    SoftwareInterruptFromUser = 0,
+    SoftwareInterruptFromSupervisor = 1,
+    SoftwareInterruptFromMachine = 3,
+    TimerInterruptFromUser = 4,
+    TimerInterruptFromSupervisor = 5,
+    TimerInterruptFromMachine = 7,
+    ExternalInterruptFromUser = 8,
+    ExternalInterruptFromSupervisor = 9,
+    ExternalInterruptFromMachine = 11,
+}
+
+/// Represents either an exception or an interrupt cause.
+pub enum Cause {
+    Exception(ExceptionCause),
+    Interrupt(InterruptCause),
 }
