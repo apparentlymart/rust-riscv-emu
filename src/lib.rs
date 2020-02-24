@@ -4,6 +4,7 @@ mod cpu;
 mod data;
 mod instruction;
 mod memory;
+mod raw_instruction;
 mod register;
 
 pub use cpu::CPU;
