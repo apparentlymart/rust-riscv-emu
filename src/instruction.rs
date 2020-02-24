@@ -20,8 +20,8 @@ impl Operation for OperationRV32 {
 
 #[derive(Debug, PartialEq)]
 pub struct Instruction<Op: Operation> {
-    op: Op,
-    length: usize,
+    pub op: Op,
+    pub length: usize,
 }
 
 impl<Op: Operation> Instruction<Op> {
