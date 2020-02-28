@@ -21,6 +21,8 @@ pub use memory::{AddressConverter, Bus, Memory};
 pub use raw_instruction::RawInstruction;
 pub use register::{ControlStatusRegister, FloatRegister, IntRegister, Register};
 
+/// Contains the instruction enum types for each base ISA.
 pub mod ops {
     pub use crate::instruction::OperationRV32 as RV32;
+    pub use crate::instruction::OperationRV64 as RV64;
 }

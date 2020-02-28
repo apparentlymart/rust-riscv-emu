@@ -5,6 +5,9 @@ use crate::register::IntRegister;
 mod instruction_32;
 pub use instruction_32::OperationRV32;
 
+mod instruction_64;
+pub use instruction_64::OperationRV64;
+
 //mod instruction_64;
 //pub use instruction_64::OperationRV64;
 
@@ -19,6 +22,14 @@ pub trait Operation {
 impl Operation for OperationRV32 {
     fn decode_raw(raw: RawInstruction) -> Self {
         OperationRV32::decode_from_raw(raw)
+    }
+}
+
+/// The RV64 implementation of `Operation` supports the operating encodings
+/// from the RV64 base ISA and some of its extensions.
+impl Operation for OperationRV64 {
+    fn decode_raw(raw: RawInstruction) -> Self {
+        OperationRV64::decode_from_raw(raw)
     }
 }
 
@@ -61,10 +72,12 @@ impl<Op: Operation, Addr> Instruction<Op, Addr> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Instruction, OperationRV32, RawInstruction};
-    use crate::register::{FloatRegister, IntRegister};
+    use super::{Instruction, OperationRV32, OperationRV64, RawInstruction};
+    use crate::register::IntRegister;
     type Inst32 = Instruction<OperationRV32, u32>;
     type Op32 = OperationRV32;
+    type Inst64 = Instruction<OperationRV64, u32>;
+    type Op64 = OperationRV64;
 
     #[test]
     fn instruction_rv32() {
@@ -124,6 +137,70 @@ mod tests {
             mkinst(0b000000000001_00000_000_00000_1110011),
             Inst32 {
                 op: Op32::Ebreak,
+                pc: 0xdeadbeef,
+                length: 4,
+            }
+        );
+    }
+
+    #[test]
+    fn instruction_rv64() {
+        fn mkinst(raw: u32) -> Inst64 {
+            Inst64::decode_raw(RawInstruction::new(raw), 0xdeadbeef)
+        }
+
+        assert_eq!(
+            mkinst(0b0000000_00011_00010_000_00001_0110011),
+            Inst64 {
+                op: Op64::Add {
+                    rd: IntRegister::num(1),
+                    rs1: IntRegister::num(2),
+                    rs2: IntRegister::num(3),
+                },
+                pc: 0xdeadbeef,
+                length: 4,
+            }
+        );
+        assert_eq!(
+            mkinst(0b000000000011_00010_000_00001_0010011),
+            Inst64 {
+                op: Op64::Addi {
+                    rd: IntRegister::num(1),
+                    rs1: IntRegister::num(2),
+                    simm: 3,
+                },
+                pc: 0xdeadbeef,
+                length: 4,
+            }
+        );
+        assert_eq!(
+            mkinst(0b111111111100_00010_000_00001_0010011),
+            Inst64 {
+                op: Op64::Addi {
+                    rd: IntRegister::num(1),
+                    rs1: IntRegister::num(2),
+                    simm: -4, // sign-extended
+                },
+                pc: 0xdeadbeef,
+                length: 4,
+            }
+        );
+        assert_eq!(
+            mkinst(0b0100000_00011_00010_000_00001_0110011),
+            Inst64 {
+                op: Op64::Sub {
+                    rd: IntRegister::num(1),
+                    rs1: IntRegister::num(2),
+                    rs2: IntRegister::num(3),
+                },
+                pc: 0xdeadbeef,
+                length: 4,
+            }
+        );
+        assert_eq!(
+            mkinst(0b000000000001_00000_000_00000_1110011),
+            Inst64 {
+                op: Op64::Ebreak,
                 pc: 0xdeadbeef,
                 length: 4,
             }
