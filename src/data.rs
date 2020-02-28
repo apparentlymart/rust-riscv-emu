@@ -17,15 +17,12 @@ pub type Byte = u8;
 /// `LongwordUnsigned` (`u64`) implementation uses RV64I behaviors.
 pub trait Int
 where
-    Self: Copy,
+    Self: Copy + Zero,
 {
     /// The native-sized signed integer type.
-    type Signed;
+    type Signed: IntOps;
     /// The native-sized unsigned integer type.
-    type Unsigned;
-
-    /// Returns the value zero.
-    fn zero() -> Self;
+    type Unsigned: IntOps;
 
     /// Populates an `Int` from a signed value of this type's native size.
     fn from_signed(v: Self::Signed) -> Self;
@@ -93,10 +90,6 @@ impl Int for WordUnsigned {
     fn to_unsigned_word(self) -> WordUnsigned {
         self
     }
-
-    fn zero() -> Self {
-        0
-    }
 }
 
 /// RV64I implementation of `Int` using `LongwordUnsigned` (`u64`) as backing storage.
@@ -143,10 +136,6 @@ impl Int for LongwordUnsigned {
         let nv = self as WordUnsigned; // just truncate existing bits
         unsafe { transmute(nv) }
     }
-
-    fn zero() -> Self {
-        0
-    }
 }
 
 /// Represents the raw storage of a float that can be interpreted either as a
@@ -164,13 +153,10 @@ impl Int for LongwordUnsigned {
 /// "double" and "longword" methods.
 pub trait Float
 where
-    Self: Copy,
+    Self: Copy + Zero,
 {
     type Single;
     type Double;
-
-    /// Returns a representation of the double-precision float zero value.
-    fn zero() -> Self;
 
     /// Populates a `Float` from a single-precision floating point value,
     /// storing it in a double-precision "NaN box" as required by the
@@ -229,10 +215,6 @@ impl Float for f64 {
     type Single = f32;
     type Double = f64;
 
-    fn zero() -> Self {
-        0.0
-    }
-
     fn from_double(v: f64) -> Self {
         v
     }
@@ -282,7 +264,7 @@ impl Float for f64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{Float, Int};
+    use super::{Float, Int, Zero};
 
     #[test]
     fn int_32() {
@@ -345,3 +327,51 @@ mod tests {
         assert_eq!(f64::from_word_bitwise(1067030938).to_single(), 1.2 as f32);
     }
 }
+
+/// Trait for types that have a zero value and can produce that value.
+pub trait Zero {
+    /// Returns the zero value of the type.
+    fn zero() -> Self;
+}
+
+macro_rules! zero_impl {
+    ($t:ty, $v:expr) => {
+        impl Zero for $t {
+            fn zero() -> Self {
+                return $v;
+            }
+        }
+    };
+}
+
+zero_impl!(Byte, 0);
+zero_impl!(HalfwordSigned, 0);
+zero_impl!(HalfwordUnsigned, 0);
+zero_impl!(WordSigned, 0);
+zero_impl!(WordUnsigned, 0);
+zero_impl!(LongwordSigned, 0);
+zero_impl!(LongwordUnsigned, 0);
+zero_impl!(QuadwordSigned, 0);
+zero_impl!(QuadwordUnsigned, 0);
+zero_impl!(usize, 0);
+zero_impl!(f32, 0.0);
+zero_impl!(f64, 0.0);
+
+macro_rules! int_ops {
+    ($($t:ident),+) => {
+        /// Trait for all of the operations required for an ISA's integer type.
+        pub trait IntOps
+        where
+            Self: core::marker::Sized + Copy $(
+                + core::ops::$t<Output=Self>
+            )*
+        {
+        }
+
+        impl<T> IntOps for T where Self: core::marker::Sized + Copy $(
+            + core::ops::$t<Output=Self>
+        )* {}
+    };
+}
+
+int_ops!(BitAnd, BitOr, Not, Shl, Shl, Shr, Shr, Add, Sub, Mul, Div, Rem);

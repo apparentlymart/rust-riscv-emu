@@ -7,10 +7,11 @@ pub enum Register {
     ControlStatus(ControlStatusRegister),
 }
 
+#[derive(Clone, Copy)]
 pub struct IntRegister(usize);
 
 impl IntRegister {
-    pub fn num(n: usize) -> Self {
+    pub fn numbered(n: usize) -> Self {
         if n > 31 {
             panic!("register number out of range (0-31 inclusive)");
         }
@@ -18,7 +19,11 @@ impl IntRegister {
     }
 
     pub fn zero() -> Self {
-        Self::num(0)
+        Self::numbered(0)
+    }
+
+    pub fn num(&self) -> usize {
+        self.0
     }
 }
 
@@ -40,14 +45,19 @@ impl core::convert::From<IntRegister> for Register {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct FloatRegister(usize);
 
 impl FloatRegister {
-    pub fn num(n: usize) -> Self {
+    pub fn numbered(n: usize) -> Self {
         if n > 31 {
             panic!("float register number out of range (0-31 inclusive)");
         }
         return Self(n);
+    }
+
+    pub fn num(&self) -> usize {
+        self.0
     }
 }
 
@@ -69,14 +79,19 @@ impl core::convert::From<FloatRegister> for Register {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct ControlStatusRegister(usize);
 
 impl ControlStatusRegister {
-    pub fn num(n: usize) -> Self {
+    pub fn numbered(n: usize) -> Self {
         if n >= 4096 {
             panic!("CSR number out of range (0-4095 inclusive)");
         }
         return Self(n);
+    }
+
+    pub fn num(&self) -> usize {
+        self.0
     }
 }
 

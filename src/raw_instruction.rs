@@ -38,28 +38,28 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000111110000000) >> 7;
-        return FloatRegister::num(raw as usize);
+        return FloatRegister::numbered(raw as usize);
     }
 
     pub fn cfrdq(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000000000011100) >> 2;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn cfrs2(&self) -> FloatRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000000001111100) >> 2;
-        return FloatRegister::num(raw as usize);
+        return FloatRegister::numbered(raw as usize);
     }
 
     pub fn cfrs2q(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000000000011100) >> 2;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn cimm16sp(&self) -> i32 {
@@ -270,63 +270,63 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000111110000000) >> 7;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crd0(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000001
         raw |= (self.0 & 0b00000000000000000001000000000000) >> 12;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crdq(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000000000011100) >> 2;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crs1(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000111110000000) >> 7;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crs1q(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000001110000000) >> 7;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crs1rd(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000111110000000) >> 7;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crs1rdq(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000001110000000) >> 7;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crs2(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000000001111100) >> 2;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn crs2q(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000000000011100) >> 2;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn csr12(&self) -> u32 {
@@ -340,28 +340,28 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000111110000000) >> 7;
-        return FloatRegister::num(raw as usize);
+        return FloatRegister::numbered(raw as usize);
     }
 
     pub fn frs1(&self) -> FloatRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000011111000000000000000) >> 15;
-        return FloatRegister::num(raw as usize);
+        return FloatRegister::numbered(raw as usize);
     }
 
     pub fn frs2(&self) -> FloatRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000001111100000000000000000000) >> 20;
-        return FloatRegister::num(raw as usize);
+        return FloatRegister::numbered(raw as usize);
     }
 
     pub fn frs3(&self) -> FloatRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b11111000000000000000000000000000) >> 27;
-        return FloatRegister::num(raw as usize);
+        return FloatRegister::numbered(raw as usize);
     }
 
     pub fn imm12(&self) -> i32 {
@@ -418,7 +418,7 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000000000000111110000000) >> 7;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn rl(&self) -> bool {
@@ -433,21 +433,21 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000000000011111000000000000000) >> 15;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn rs2(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b00000001111100000000000000000000) >> 20;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn rs3(&self) -> IntRegister {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000011111
         raw |= (self.0 & 0b11111000000000000000000000000000) >> 27;
-        return IntRegister::num(raw as usize);
+        return IntRegister::numbered(raw as usize);
     }
 
     pub fn sbimm12(&self) -> i32 {

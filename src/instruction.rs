@@ -1,6 +1,4 @@
 use crate::raw_instruction::RawInstruction;
-use crate::register::FloatRegister;
-use crate::register::IntRegister;
 
 mod instruction_32;
 pub use instruction_32::OperationRV32;
@@ -89,9 +87,9 @@ mod tests {
             mkinst(0b0000000_00011_00010_000_00001_0110011),
             Inst32 {
                 op: Op32::Add {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
-                    rs2: IntRegister::num(3),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
+                    rs2: IntRegister::numbered(3),
                 },
                 pc: 0xdeadbeef,
                 length: 4,
@@ -101,8 +99,8 @@ mod tests {
             mkinst(0b000000000011_00010_000_00001_0010011),
             Inst32 {
                 op: Op32::Addi {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
                     simm: 3,
                 },
                 pc: 0xdeadbeef,
@@ -113,8 +111,8 @@ mod tests {
             mkinst(0b111111111100_00010_000_00001_0010011),
             Inst32 {
                 op: Op32::Addi {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
                     simm: -4, // sign-extended
                 },
                 pc: 0xdeadbeef,
@@ -125,9 +123,9 @@ mod tests {
             mkinst(0b0100000_00011_00010_000_00001_0110011),
             Inst32 {
                 op: Op32::Sub {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
-                    rs2: IntRegister::num(3),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
+                    rs2: IntRegister::numbered(3),
                 },
                 pc: 0xdeadbeef,
                 length: 4,
@@ -153,9 +151,9 @@ mod tests {
             mkinst(0b0000000_00011_00010_000_00001_0110011),
             Inst64 {
                 op: Op64::Add {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
-                    rs2: IntRegister::num(3),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
+                    rs2: IntRegister::numbered(3),
                 },
                 pc: 0xdeadbeef,
                 length: 4,
@@ -165,8 +163,8 @@ mod tests {
             mkinst(0b000000000011_00010_000_00001_0010011),
             Inst64 {
                 op: Op64::Addi {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
                     simm: 3,
                 },
                 pc: 0xdeadbeef,
@@ -177,8 +175,8 @@ mod tests {
             mkinst(0b111111111100_00010_000_00001_0010011),
             Inst64 {
                 op: Op64::Addi {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
                     simm: -4, // sign-extended
                 },
                 pc: 0xdeadbeef,
@@ -189,9 +187,9 @@ mod tests {
             mkinst(0b0100000_00011_00010_000_00001_0110011),
             Inst64 {
                 op: Op64::Sub {
-                    rd: IntRegister::num(1),
-                    rs1: IntRegister::num(2),
-                    rs2: IntRegister::num(3),
+                    rd: IntRegister::numbered(1),
+                    rs1: IntRegister::numbered(2),
+                    rs2: IntRegister::numbered(3),
                 },
                 pc: 0xdeadbeef,
                 length: 4,
