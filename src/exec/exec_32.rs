@@ -1,6 +1,7 @@
 use crate::data::sign_extend;
 use crate::data::{Float, Int};
 use crate::exception::ExceptionCause;
+use crate::exec::ExecStatus;
 use crate::hart::Hart;
 use crate::instruction::Instruction;
 use crate::instruction::OperationRV32;
@@ -18,7 +19,7 @@ type Op = OperationRV32;
 ///
 /// When this function returns, the state of the hart will have been modified
 /// to reflect the side-effects of the action.
-pub fn step_rv32<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>) {
+pub fn step_rv32<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>) -> ExecStatus<u32> {
     let pc = hart.read_pc();
     let raw_inst_result: Result<RawInstruction, MemoryError> =
         hart.with_memory(|mem| match mem.read_word(pc) {
@@ -37,7 +38,7 @@ pub fn step_rv32<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>) {
             // change the program counter again before it returns, overriding
             // this default.
             hart.write_pc(pc.wrapping_add(inst.length as u32));
-            dispatch_instruction(inst, hart);
+            return dispatch_instruction(inst, hart);
         }
         Err(e) => {
             let cause: ExceptionCause = match e {
@@ -46,7 +47,7 @@ pub fn step_rv32<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>) {
                 MemoryError::PageFault => ExceptionCause::InstructionPageFault,
             };
             hart.exception(cause);
-            return;
+            return ExecStatus::Running;
         }
     }
 }
@@ -56,7 +57,7 @@ pub fn step_rv32<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>) {
 fn dispatch_instruction<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-) {
+) -> ExecStatus<u32> {
     match inst.op {
         Op::Add { rd, rs1, rs2 } => exec_add(hart, inst, rd, rs1, rs2),
         Op::Addi { rd, rs1, simm } => exec_addi(hart, inst, rd, rs1, simm),
@@ -441,7 +442,10 @@ fn dispatch_instruction<Mem: Bus<u32>>(
         Op::Wfi => exec_wfi(hart, inst),
         Op::Xor { rd, rs1, rs2 } => exec_xor(hart, inst, rd, rs1, rs2),
         Op::Xori { rd, rs1, simm } => exec_xori(hart, inst, rd, rs1, simm),
-        _ => hart.exception(ExceptionCause::IllegalInstruction),
+        _ => {
+            hart.exception(ExceptionCause::IllegalInstruction);
+            ExecStatus::Running
+        }
     }
 }
 
@@ -454,11 +458,12 @@ fn exec_add<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_signed();
     let b = hart.read_int_register(rs2).to_signed();
     let result = a.wrapping_add(b);
-    hart.write_int_register(rd, u32::from_signed(result))
+    hart.write_int_register(rd, u32::from_signed(result));
+    ExecStatus::Running
 }
 
 // Add Immediate: Add sign-extended 12-bit immediate to register rs1 and place the result in rd.
@@ -470,11 +475,12 @@ fn exec_addi<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_signed();
     let b = simm;
     let result = a.wrapping_add(b);
-    hart.write_int_register(rd, u32::from_signed(result))
+    hart.write_int_register(rd, u32::from_signed(result));
+    ExecStatus::Running
 }
 
 // Atomic Add Word: Load word from address in rs1 into rd, add rd and rs2, write the result to the address in rs1.
@@ -488,9 +494,10 @@ fn exec_amoadd_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic And Word: Load word from address in rs1 into rd, and rd and rs2, write the result to the address in rs1.
@@ -504,9 +511,10 @@ fn exec_amoand_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Maximum Word: Load word from address in rs1 into rd, find maximum of rd and rs2, write the result to the address in rs1 (signed).
@@ -520,9 +528,10 @@ fn exec_amomax_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Maximum Unsigned Word: Load word from address in rs1 into rd, find maximum of rd and rs2, write the result to the address in rs1 (unsigned).
@@ -536,9 +545,10 @@ fn exec_amomaxu_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Minimum Word: Load word from address in rs1 into rd, find minimum of rd and rs2, write the result to the address in rs1 (signed).
@@ -552,9 +562,10 @@ fn exec_amomin_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Minimum Unsigned Word: Load word from address in rs1 into rd, find minimum of rd and rs2, write the result to the address in rs1 (unsigned).
@@ -568,9 +579,10 @@ fn exec_amominu_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Or Word: Load word from address in rs1 into rd, or rd and rs2, write the result to the address in rs1.
@@ -584,9 +596,10 @@ fn exec_amoor_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Swap Word: Load word from address in rs1 into rd, swap rd and rs2, write the result to the address in rs1.
@@ -600,9 +613,10 @@ fn exec_amoswap_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Atomic Xor Word: Load word from address in rs1 into rd, xor rd and rs2, write the result to the address in rs1.
@@ -616,9 +630,10 @@ fn exec_amoxor_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // And: Set rd to the bitwise and of rs1 and rs2.
@@ -630,11 +645,12 @@ fn exec_and<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = hart.read_int_register(rs2).to_unsigned();
     let result = a & b;
-    hart.write_int_register(rd, u32::from_unsigned(result))
+    hart.write_int_register(rd, u32::from_unsigned(result));
+    ExecStatus::Running
 }
 
 // And Immediate: Set rd to the bitwise and of rs1 with the sign-extended 12-bit immediate.
@@ -646,11 +662,12 @@ fn exec_andi<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = u32::from_signed(simm).to_unsigned();
     let result = a & b;
-    hart.write_int_register(rd, u32::from_unsigned(result))
+    hart.write_int_register(rd, u32::from_unsigned(result));
+    ExecStatus::Running
 }
 
 // Add Upper Immediate to PC: Place the PC plus the 20-bit signed immediate (shited 12 bits left) into rd (used before JALR).
@@ -661,9 +678,10 @@ fn exec_auipc<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
     rd: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let result = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-    hart.write_int_register(rd, u32::from_unsigned(result))
+    hart.write_int_register(rd, u32::from_unsigned(result));
+    ExecStatus::Running
 }
 
 // Branch Equal: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 == rs2.
@@ -675,13 +693,14 @@ fn exec_beq<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = hart.read_int_register(rs2).to_unsigned();
     if a == b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
 }
 
 // Branch Greater than Equal: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 >= rs2 (signed).
@@ -693,13 +712,14 @@ fn exec_bge<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_signed();
     let b = hart.read_int_register(rs2).to_signed();
     if a >= b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
 }
 
 // Branch Greater than Equal Unsigned: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 >= rs2 (unsigned).
@@ -711,13 +731,14 @@ fn exec_bgeu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = hart.read_int_register(rs2).to_unsigned();
     if a >= b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
 }
 
 // Branch Less Than: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 < rs2 (signed).
@@ -729,13 +750,14 @@ fn exec_blt<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_signed();
     let b = hart.read_int_register(rs2).to_signed();
     if a < b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
 }
 
 // Branch Less Than Unsigned: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 < rs2 (unsigned).
@@ -747,13 +769,14 @@ fn exec_bltu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = hart.read_int_register(rs2).to_unsigned();
     if a < b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
 }
 
 // Branch Not Equal: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 != rs2.
@@ -765,13 +788,14 @@ fn exec_bne<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = hart.read_int_register(rs2).to_unsigned();
     if a == b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
 }
 
 // : .
@@ -782,8 +806,9 @@ fn exec_c_add<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     exec_add(hart, inst, rs1rd, rs1rd, rs2);
+    ExecStatus::Running
 }
 
 // : .
@@ -794,8 +819,9 @@ fn exec_c_addi<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzsimm: i32,
-) {
+) -> ExecStatus<u32> {
     exec_addi(hart, inst, rs1rd, rs1rd, nzsimm);
+    ExecStatus::Running
 }
 
 // : .
@@ -806,9 +832,10 @@ fn exec_c_addi16sp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzsimm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -819,9 +846,10 @@ fn exec_c_addi4spn<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     nzuimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -832,9 +860,10 @@ fn exec_c_addw<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -845,9 +874,10 @@ fn exec_c_and<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -858,9 +888,10 @@ fn exec_c_andi<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzsimm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -871,9 +902,10 @@ fn exec_c_beqz<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -884,9 +916,10 @@ fn exec_c_bnez<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -895,9 +928,10 @@ fn exec_c_bnez<Mem: Bus<u32>>(
 fn exec_c_ebreak<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     _inst: Instruction<Op, u32>,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -909,9 +943,10 @@ fn exec_c_fld<Mem: Bus<u32>>(
     frd: IntRegister,
     rs1: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -922,9 +957,10 @@ fn exec_c_fldsp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     frd: FloatRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -936,9 +972,10 @@ fn exec_c_flw<Mem: Bus<u32>>(
     frd: IntRegister,
     rs1: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -949,9 +986,10 @@ fn exec_c_flwsp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     frd: FloatRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -963,9 +1001,10 @@ fn exec_c_fsd<Mem: Bus<u32>>(
     rs1: IntRegister,
     frs2: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -976,9 +1015,10 @@ fn exec_c_fsdsp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     frs2: FloatRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -990,9 +1030,10 @@ fn exec_c_fsw<Mem: Bus<u32>>(
     rs1: IntRegister,
     frs2: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1003,9 +1044,10 @@ fn exec_c_fswsp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     frs2: FloatRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1015,9 +1057,10 @@ fn exec_c_j<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     _inst: Instruction<Op, u32>,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1027,9 +1070,10 @@ fn exec_c_jal<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     _inst: Instruction<Op, u32>,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1040,9 +1084,10 @@ fn exec_c_jalr<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs1: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1053,9 +1098,10 @@ fn exec_c_jr<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs1: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1066,9 +1112,10 @@ fn exec_c_li<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1079,9 +1126,10 @@ fn exec_c_lui<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     nzsimm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1093,9 +1141,10 @@ fn exec_c_lw<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1106,9 +1155,10 @@ fn exec_c_lwsp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1119,9 +1169,10 @@ fn exec_c_mv<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1130,8 +1181,9 @@ fn exec_c_mv<Mem: Bus<u32>>(
 fn exec_c_nop<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     _inst: Instruction<Op, u32>,
-) {
+) -> ExecStatus<u32> {
     // Nothing to do.
+    ExecStatus::Running
 }
 
 // : .
@@ -1142,9 +1194,10 @@ fn exec_c_or<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1155,9 +1208,10 @@ fn exec_c_slli<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzuimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1168,9 +1222,10 @@ fn exec_c_srai<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzuimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1181,9 +1236,10 @@ fn exec_c_srli<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzuimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1194,9 +1250,10 @@ fn exec_c_sub<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1207,9 +1264,10 @@ fn exec_c_subw<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1221,9 +1279,10 @@ fn exec_c_sw<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1234,9 +1293,10 @@ fn exec_c_swsp<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs2: IntRegister,
     uimm: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -1247,9 +1307,10 @@ fn exec_c_xor<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // CSR Atomic Clear Bit: CSR Atomic Clear Bit reads the CSR, clears CSR bits set in rs1, and writes previous value to rd.
@@ -1261,9 +1322,10 @@ fn exec_csrrc<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     csr: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // CSR Atomic Clear Bit Immediate: CSR Atomic Clear Bit Immediate reads the CSR, clears CSR bits set in the immediate, and writes previous value to rd.
@@ -1275,9 +1337,10 @@ fn exec_csrrci<Mem: Bus<u32>>(
     rd: IntRegister,
     uimm: u32,
     csr: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // CSR Atomic Set Bit: CSR Atomic Set Bit reads the CSR, sets CSR bits set in rs1, and writes previous value to rd.
@@ -1289,9 +1352,10 @@ fn exec_csrrs<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     csr: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // CSR Atomic Set Bit Immediate: CSR Atomic Set Bit Immediate reads the CSR, sets CSR bits set in the immediate, and writes previous value to rd.
@@ -1303,9 +1367,10 @@ fn exec_csrrsi<Mem: Bus<u32>>(
     rd: IntRegister,
     uimm: u32,
     csr: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // CSR Atomic Read Write: CSR Atomic Read Write writes the value in rs1 to the CSR, and writes previous value to rd.
@@ -1317,9 +1382,10 @@ fn exec_csrrw<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     csr: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // CSR Atomic Read Write Immediate: CSR Atomic Read Write Immediate writes the immediate value to the CSR, and writes previous value to rd.
@@ -1331,9 +1397,10 @@ fn exec_csrrwi<Mem: Bus<u32>>(
     rd: IntRegister,
     uimm: u32,
     csr: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Divide Signed: Divide rs1 (dividend) by rs2 (divisor) and place the quotient in rd (signed).
@@ -1345,9 +1412,10 @@ fn exec_div<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Divide Unsigned: Divide rs1 (dividend) by rs2 (divisor) and place the quotient in rd (unsigned).
@@ -1359,17 +1427,22 @@ fn exec_divu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Debug-Mode Return: .
 //
 // >
-fn exec_dret<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Instruction<Op, u32>) {
+fn exec_dret<Mem: Bus<u32>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    _inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Environment Break to Debugger: .
@@ -1377,10 +1450,13 @@ fn exec_dret<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Ins
 // >
 fn exec_ebreak<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
-) {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
+    if !hart.environment_break(inst.pc) {
+        ExecStatus::Running
+    } else {
+        ExecStatus::EnvironmentBreak(inst.pc)
+    }
 }
 
 // Environment Call: .
@@ -1388,10 +1464,13 @@ fn exec_ebreak<Mem: Bus<u32>>(
 // >
 fn exec_ecall<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
-) {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
+    if !hart.environment_call(inst.pc) {
+        ExecStatus::Running
+    } else {
+        ExecStatus::EnvironmentCall(inst.pc)
+    }
 }
 
 // FP Add (DP): Add the double-precision values in frs1 and frs2, then write the result to frd.
@@ -1404,9 +1483,9 @@ fn exec_fadd_d<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     hart.exception(ExceptionCause::IllegalInstruction);
-    return;
+    return ExecStatus::Running;
 
     let a = hart.read_float_register(frs1).to_double();
     let b = hart.read_float_register(frs2).to_double();
@@ -1425,9 +1504,10 @@ fn exec_fadd_q<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Add (SP): Add the single-precision values in frs1 and frs2, then write the result to frd.
@@ -1440,9 +1520,10 @@ fn exec_fadd_s<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Classify (DP): Set rd to a 10-bit mask indicating the class of the double-precision value in frs1.
@@ -1453,9 +1534,10 @@ fn exec_fclass_d<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     frs1: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Classify (QP): Set rd to a 10-bit mask indicating the class of the quadruple-precision value in frs1.
@@ -1466,9 +1548,10 @@ fn exec_fclass_q<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     frs1: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Classify (SP): Set rd to a 10-bit mask indicating the class of the single-precision value in frs1.
@@ -1479,9 +1562,10 @@ fn exec_fclass_s<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     frs1: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert QP to DP: Convert the quadruple-precision value in frs1 to double-precision, then write the result to frd.
@@ -1493,9 +1577,10 @@ fn exec_fcvt_d_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert SP to DP: Convert the single-precision value in frs1 to double-precision, then write the result to frd.
@@ -1507,9 +1592,10 @@ fn exec_fcvt_d_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Word to Float (DP): Convert the 64-bit signed integer in rs1 to a double-precision value, then write the result to frd.
@@ -1521,9 +1607,10 @@ fn exec_fcvt_d_w<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Word Unsigned to Float (DP): Convert the 64-bit unsigned integer in rs1 to a double-precision value, then write the result to frd.
@@ -1535,9 +1622,10 @@ fn exec_fcvt_d_wu<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert DP to QP: Convert the double-precision value in frs1 to quadruple-precision, then write the result to frd.
@@ -1549,9 +1637,10 @@ fn exec_fcvt_q_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert SP to QP: Convert the single-precision value in frs1 to quadruple-precision, then write the result to frd.
@@ -1563,9 +1652,10 @@ fn exec_fcvt_q_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Word to Float (QP): Convert the 64-bit signed integer in rs1 to a quadruple-precision value, then write the result to frd.
@@ -1577,9 +1667,10 @@ fn exec_fcvt_q_w<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Word Unsigned to Float (QP): Convert the 64-bit unsigned integer in rs1 to a quadruple-precision value, then write the result to frd.
@@ -1591,9 +1682,10 @@ fn exec_fcvt_q_wu<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert DP to SP: Convert the double-precision value in frs1 to single-precision, then write the result to frd.
@@ -1605,9 +1697,10 @@ fn exec_fcvt_s_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert QP to SP: Convert the quadruple-precision value in frs1 to single-precision, then write the result to frd.
@@ -1619,9 +1712,10 @@ fn exec_fcvt_s_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Word to Float (SP): Convert the 32-bit signed integer in rs1 to a single-precision value, then write the result to frd.
@@ -1633,9 +1727,10 @@ fn exec_fcvt_s_w<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Word Unsigned to Float (SP): Convert the 32-bit unsigned integer in rs1 to a single-precision value, then write the result to frd.
@@ -1647,9 +1742,10 @@ fn exec_fcvt_s_wu<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Float to Word (DP): Convert the double-precision value in frs1 to a 32-bit signed integer, then write the result to rd.
@@ -1661,9 +1757,10 @@ fn exec_fcvt_w_d<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Float to Word (QP): Convert the quadruple-precision value in frs1 to a 32-bit signed integer, then write the result to rd.
@@ -1675,9 +1772,10 @@ fn exec_fcvt_w_q<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Float to Word (SP): Convert the single-precision value in frs1 to a 32-bit signed integer, then write the result to rd.
@@ -1689,9 +1787,10 @@ fn exec_fcvt_w_s<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Float to Word Unsigned (DP): Convert the double-precision value in frs1 to a 32-bit unsigned integer, then write the result to rd.
@@ -1703,9 +1802,10 @@ fn exec_fcvt_wu_d<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Float to Word Unsigned (QP): Convert the quadruple-precision value in frs1 to a 32-bit unsigned integer, then write the result to rd.
@@ -1717,9 +1817,10 @@ fn exec_fcvt_wu_q<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Convert Float to Word Unsigned (SP): Convert the single-precision value in frs1 to a 32-bit unsigned integer, then write the result to rd.
@@ -1731,9 +1832,10 @@ fn exec_fcvt_wu_s<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Divide (DP): Divide the double-precision value in frs1 into frs2, then write the result to frd.
@@ -1746,9 +1848,10 @@ fn exec_fdiv_d<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Divide (QP): Divide the quadruple-precision value in frs1 into frs2, then write the result to frd.
@@ -1761,9 +1864,10 @@ fn exec_fdiv_q<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Divide (SP): Divide the single-precision value in frs1 into frs2, then write the result to frd.
@@ -1776,9 +1880,10 @@ fn exec_fdiv_s<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Fence: Order device I/O and memory accesses viewed by other threads and devices.
@@ -1789,8 +1894,9 @@ fn exec_fence<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     _pred: bool,
     _succ: bool,
-) {
+) -> ExecStatus<u32> {
     hart.fence_data();
+    ExecStatus::Running
 }
 
 // Fence Instruction: Synchronize the instruction and data streams.
@@ -1799,8 +1905,9 @@ fn exec_fence<Mem: Bus<u32>>(
 fn exec_fence_i<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     _inst: Instruction<Op, u32>,
-) {
+) -> ExecStatus<u32> {
     hart.fence_code();
+    ExecStatus::Running
 }
 
 // FP Equal (DP): Set rd to 1 if frs1 is equal to frs2, otherwise set rd to 0.
@@ -1812,9 +1919,10 @@ fn exec_feq_d<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Equal (QP): Set rd to 1 if frs1 is equal to frs2, otherwise set rd to 0.
@@ -1826,9 +1934,10 @@ fn exec_feq_q<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Equal (SP): Set rd to 1 if the single-precision value in frs1 is equal to frs2, otherwise set rd to 0.
@@ -1840,9 +1949,10 @@ fn exec_feq_s<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Load (DP): Loads a double-precision foating-point value from memory into foating-point register frd.
@@ -1854,9 +1964,10 @@ fn exec_fld<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Less Than Equal (DP): Set rd to 1 if frs1 is less than or equal to frs2, otherwise set rd to 0.
@@ -1868,9 +1979,10 @@ fn exec_fle_d<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Less Than Equal (QP): Set rd to 1 if frs1 is less than or equal to frs2, otherwise set rd to 0.
@@ -1882,9 +1994,10 @@ fn exec_fle_q<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Less Than Equal (SP): Set rd to 1 if the single-precision value in frs1 is less than or equal to frs2, otherwise set rd to 0.
@@ -1896,9 +2009,10 @@ fn exec_fle_s<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Load (QP): Loads a quadruple-precision foating-point value from memory into foating-point register frd.
@@ -1910,9 +2024,10 @@ fn exec_flq<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Less Than (DP): Set rd to 1 if frs1 is less than frs2, otherwise set rd to 0.
@@ -1924,9 +2039,10 @@ fn exec_flt_d<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Less Than (QP): Set rd to 1 if frs1 is less than frs2, otherwise set rd to 0.
@@ -1938,9 +2054,10 @@ fn exec_flt_q<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Less Than (SP): Set rd to 1 if the single-precision value in frs1 is less than frs2, otherwise set rd to 0.
@@ -1952,9 +2069,10 @@ fn exec_flt_s<Mem: Bus<u32>>(
     rd: IntRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Load (SP): Loads a single-precision foating-point value from memory into foating-point register frd.
@@ -1966,9 +2084,10 @@ fn exec_flw<Mem: Bus<u32>>(
     frd: FloatRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Fused Multiply Add (DP): Multiply the double-precision values in frs1 and frs2, then add rs3 and write the result to frd.
@@ -1982,9 +2101,10 @@ fn exec_fmadd_d<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Fused Multiply Add (QP): Multiply the quadruple-precision values in frs1 and frs2, then add rs3 and write the result to frd.
@@ -1998,9 +2118,10 @@ fn exec_fmadd_q<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Fused Multiply Add (SP): Multiply the single-precision values in frs1 and frs2, then add rs3 and write the result to frd.
@@ -2014,9 +2135,10 @@ fn exec_fmadd_s<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Maximum (DP): .
@@ -2028,9 +2150,10 @@ fn exec_fmax_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Maximum (QP): .
@@ -2042,9 +2165,10 @@ fn exec_fmax_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Maximum (SP): Take the larger quadruple-precision value from frs1 and frs2, then write the result to frd.
@@ -2056,9 +2180,10 @@ fn exec_fmax_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Minimum (DP): .
@@ -2070,9 +2195,10 @@ fn exec_fmin_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Minimum (QP): .
@@ -2084,9 +2210,10 @@ fn exec_fmin_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Minimum (SP): Take the smaller quadruple-precision value from frs1 and frs2, then write the result to frd.
@@ -2098,9 +2225,10 @@ fn exec_fmin_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Fused Multiply Subtract (DP): Multiply the double-precision values in frs1 and frs2, then subtract rs3 and write the result to frd.
@@ -2114,9 +2242,10 @@ fn exec_fmsub_d<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Fused Multiply Subtract (QP): Multiply the quadruple-precision values in frs1 and frs2, then subtract rs3 and write the result to frd.
@@ -2130,9 +2259,10 @@ fn exec_fmsub_q<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Fused Multiply Subtract (SP): Multiply the single-precision values in frs1 and frs2, then subtract rs3 and write the result to frd.
@@ -2146,9 +2276,10 @@ fn exec_fmsub_s<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Multiply (DP): Multiply the double-precision values in frs1 and frs2, then write the result to frd.
@@ -2161,9 +2292,10 @@ fn exec_fmul_d<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Multiply (QP): Multiply the quadruple-precision values in frs1 and frs2, then write the result to frd.
@@ -2176,9 +2308,10 @@ fn exec_fmul_q<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Multiply (SP): Multiply the single-precision values in frs1 and frs2, then write the result to frd.
@@ -2191,9 +2324,10 @@ fn exec_fmul_s<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Move from Integer Register (SP): Write the lower 32-bits of the integer register rs1 into the single-precision register frd.
@@ -2204,9 +2338,10 @@ fn exec_fmv_s_x<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     frd: FloatRegister,
     rs1: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Move to Integer Register (SP): Write the sign extended single-precision value in frs1 into the integer register rd.
@@ -2217,9 +2352,10 @@ fn exec_fmv_x_s<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     frs1: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Negate fused Multiply Add (DP): Multiply the double-precision value in frs1 with the negated value in frs2, then subtract rs3 and write the result to frd.
@@ -2233,9 +2369,10 @@ fn exec_fnmadd_d<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Negate fused Multiply Add (QP): Multiply the quadruple-precision value in frs1 with the negated value in frs2, then subtract rs3 and write the result to frd.
@@ -2249,9 +2386,10 @@ fn exec_fnmadd_q<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Negate fused Multiply Add (SP): Multiply the single-precision value in frs1 with the negated value in frs2, then subtract rs3 and write the result to frd.
@@ -2265,9 +2403,10 @@ fn exec_fnmadd_s<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Negate fused Multiply Subtract (DP): Multiply the double-precision value in frs1 with the negated value in frs2, then add rs3 and write the result to frd.
@@ -2281,9 +2420,10 @@ fn exec_fnmsub_d<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Negate fused Multiply Subtract (QP): Multiply the quadruple-precision value in frs1 with the negated value in frs2, then add rs3 and write the result to frd.
@@ -2297,9 +2437,10 @@ fn exec_fnmsub_q<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Negate fused Multiply Subtract (SP): Multiply the single-precision value in frs1 with the negated value in frs2, then add rs3 and write the result to frd.
@@ -2313,9 +2454,10 @@ fn exec_fnmsub_s<Mem: Bus<u32>>(
     frs2: FloatRegister,
     frs3: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Store (DP): Stores a double-precision foating-point value from foating-point register frs2 to memory.
@@ -2327,9 +2469,10 @@ fn exec_fsd<Mem: Bus<u32>>(
     rs1: IntRegister,
     frs2: FloatRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP to Sign-injection (DP): Take the double-precision value from frs1 and inject the sign bit from frs2, then write the result to frd.
@@ -2341,9 +2484,10 @@ fn exec_fsgnj_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP to Sign-injection (QP): Take the quadruple-precision value from frs1 and inject the sign bit from frs2, then write the result to frd.
@@ -2355,9 +2499,10 @@ fn exec_fsgnj_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Sign-injection (SP): Take the single-precision value from frs1 and inject the sign bit from frs2, then write the result to frd.
@@ -2369,9 +2514,10 @@ fn exec_fsgnj_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP to Sign-injection Negate (DP): Take the double-precision value from frs1 and inject the negated sign bit from frs2, then write the result to frd.
@@ -2383,9 +2529,10 @@ fn exec_fsgnjn_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP to Sign-injection Negate (QP): Take the quadruple-precision value from frs1 and inject the negated sign bit from frs2, then write the result to frd.
@@ -2397,9 +2544,10 @@ fn exec_fsgnjn_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Sign-injection Negate (SP): Take the single-precision value from frs1 and inject the negated sign bit from frs2, then write the result to frd.
@@ -2411,9 +2559,10 @@ fn exec_fsgnjn_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP to Sign-injection Xor (DP): Take the double-precision value from frs1 and inject the xor of the sign bits frs1 and frs2, then write the result to frd.
@@ -2425,9 +2574,10 @@ fn exec_fsgnjx_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP to Sign-injection Xor (QP): Take the quadruple-precision value from frs1 and inject the xor of the sign bits frs1 and frs2, then write the result to frd.
@@ -2439,9 +2589,10 @@ fn exec_fsgnjx_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Sign-injection Xor (SP): Take the single-precision value from frs1 and inject the xor of the sign bits frs1 and frs2, then write the result to frd.
@@ -2453,9 +2604,10 @@ fn exec_fsgnjx_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     frs2: FloatRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Store (QP): Stores a quadruple-precision foating-point value from foating-point register frs2 to memory.
@@ -2467,9 +2619,10 @@ fn exec_fsq<Mem: Bus<u32>>(
     rs1: IntRegister,
     frs2: FloatRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Floating Square Root (DP): Calculate the square root of the double-precision value in frs1, then write the result to frd.
@@ -2481,9 +2634,10 @@ fn exec_fsqrt_d<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Floating Square Root (QP): Calculate the square root of the quadruple-precision value in frs1, then write the result to frd.
@@ -2495,9 +2649,10 @@ fn exec_fsqrt_q<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Square Root (SP): Calculate the square root of the single-precision value in frs1, then write the result to frd.
@@ -2509,9 +2664,10 @@ fn exec_fsqrt_s<Mem: Bus<u32>>(
     frd: FloatRegister,
     frs1: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Subtract (DP): Subtract the double-precision values in frs1 from frs2, then write the result to frd.
@@ -2524,9 +2680,10 @@ fn exec_fsub_d<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Subtract (QP): Subtract the quadruple-precision values in frs1 from frs2, then write the result to frd.
@@ -2539,9 +2696,10 @@ fn exec_fsub_q<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Subtract (SP): Subtract the single-precision values in frs1 from frs2, then write the result to frd.
@@ -2554,9 +2712,10 @@ fn exec_fsub_s<Mem: Bus<u32>>(
     frs1: FloatRegister,
     frs2: FloatRegister,
     rm: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // FP Store (SP): Stores a single-precision foating-point value from foating-point register frs2 to memory.
@@ -2568,17 +2727,22 @@ fn exec_fsw<Mem: Bus<u32>>(
     rs1: IntRegister,
     frs2: FloatRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Hypervisor Return: .
 //
 // >
-fn exec_hret<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Instruction<Op, u32>) {
+fn exec_hret<Mem: Bus<u32>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    _inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Jump and Link: Jump to the PC plus 20-bit signed immediate while saving PC+4 into rd.
@@ -2589,11 +2753,12 @@ fn exec_jal<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
     rd: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let ret_pc = inst.pc.wrapping_add(inst.length as u32);
     hart.write_int_register(rd, u32::from_unsigned(ret_pc));
     let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
     hart.write_pc(new_pc);
+    ExecStatus::Running
 }
 
 // Jump and Link Register: Jump to rs1 plus the 12-bit signed immediate while saving PC+4 into rd.
@@ -2605,9 +2770,10 @@ fn exec_jalr<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Load Byte: Load 8-bit value from addr in rs1 plus the 12-bit signed immediate and place sign-extended result into rd.
@@ -2619,7 +2785,7 @@ fn exec_lb<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let base_addr = hart.read_int_register(rs1).to_unsigned();
     let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
     let result = hart.with_memory(|mem| mem.read_byte(addr));
@@ -2630,6 +2796,7 @@ fn exec_lb<Mem: Bus<u32>>(
         }
         Err(e) => hart.exception(e.as_data_load_cause()),
     };
+    ExecStatus::Running
 }
 
 // Load Byte Unsigned: Load 8-bit value from addr in rs1 plus the 12-bit signed immediate and place zero-extended result into rd.
@@ -2641,7 +2808,7 @@ fn exec_lbu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let base_addr = hart.read_int_register(rs1).to_unsigned();
     let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
     let result = hart.with_memory(|mem| mem.read_byte(addr));
@@ -2649,6 +2816,7 @@ fn exec_lbu<Mem: Bus<u32>>(
         Ok(v) => hart.write_int_register(rd, u32::from_unsigned(v as u32)),
         Err(e) => hart.exception(e.as_data_load_cause()),
     };
+    ExecStatus::Running
 }
 
 // Load Half: Load 16-bit value from addr in rs1 plus the 12-bit signed immediate and place sign-extended result into rd.
@@ -2660,9 +2828,10 @@ fn exec_lh<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Load Half Unsigned: Load 32-bit value from addr in rs1 plus the 12-bit signed immediate and place zero-extended result into rd.
@@ -2674,9 +2843,10 @@ fn exec_lhu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Load Reserved Word: Load word from address in rs1, place the sign-extended result in rd and register a reservation on the memory word.
@@ -2689,9 +2859,10 @@ fn exec_lr_w<Mem: Bus<u32>>(
     rs1: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Load Upper Immediate: Set and sign extend the 20-bit immediate (shited 12 bits left) and zero the bottom 12 bits into rd.
@@ -2702,9 +2873,10 @@ fn exec_lui<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rd: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Load Word: Load 32-bit value from addr in rs1 plus the 12-bit signed immediate and place sign-extended result into rd.
@@ -2716,17 +2888,22 @@ fn exec_lw<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Machine-Mode Return: .
 //
 // >
-fn exec_mret<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Instruction<Op, u32>) {
+fn exec_mret<Mem: Bus<u32>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    _inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Multiply: Multiply rs1 by rs2 and place the result in rd.
@@ -2738,9 +2915,10 @@ fn exec_mul<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Multiply High Signed Signed: Multiply signed rs1 by signed rs2 and place the high bits of the result in rd.
@@ -2752,9 +2930,10 @@ fn exec_mulh<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Multiply High Signed Unsigned: Multiply signed rs1 by unsigned rs2 and place the high bits of the result in rd.
@@ -2766,9 +2945,10 @@ fn exec_mulhsu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Multiply High Unsigned Unsigned: Multiply unsigned rs1 by unsigned rs2 and place the high bits of the result in rd.
@@ -2780,9 +2960,10 @@ fn exec_mulhu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Or: Set rd to the bitwise or of rs1 and rs2.
@@ -2794,9 +2975,10 @@ fn exec_or<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Or Immediate: Set rd to the bitwise or of rs1 with the sign-extended 12-bit immediate.
@@ -2808,9 +2990,10 @@ fn exec_ori<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Remainder Signed: Divide rs1 (dividend) by rs2 (divisor) and place the remainder in rd (signed).
@@ -2822,9 +3005,10 @@ fn exec_rem<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Remainder Unsigned: Divide rs1 (dividend) by rs2 (divisor) and place the remainder in rd (unsigned).
@@ -2836,9 +3020,10 @@ fn exec_remu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Store Byte: Store 8-bit value from the low bits of rs2 to addr in rs1 plus the 12-bit signed immediate.
@@ -2850,7 +3035,7 @@ fn exec_sb<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     let v = hart.read_int_register(rs2).to_unsigned() as u8;
     let base_addr = hart.read_int_register(rs1).to_unsigned();
     let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
@@ -2859,6 +3044,7 @@ fn exec_sb<Mem: Bus<u32>>(
         Ok(_) => {}
         Err(e) => hart.exception(e.as_data_store_cause()),
     };
+    ExecStatus::Running
 }
 
 // Store Conditional Word: Write word in rs1 to the address in rs2 if a valid reservation exists, write 0 on success or 1 on failure to rd.
@@ -2872,9 +3058,10 @@ fn exec_sc_w<Mem: Bus<u32>>(
     rs2: IntRegister,
     aq: bool,
     rl: bool,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Supervisor Memory Management Fence: Supervisor memory-management fence synchronizes updates to in-memory memory-management data structures.
@@ -2884,9 +3071,10 @@ fn exec_sfence_vm<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     _inst: Instruction<Op, u32>,
     rs1: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // : .
@@ -2897,8 +3085,9 @@ fn exec_sfence_vma<Mem: Bus<u32>>(
     _inst: Instruction<Op, u32>,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     hart.fence_virtual_memory_config(rs1, rs2);
+    ExecStatus::Running
 }
 
 // Store Half: Store 16-bit value from the low bits of rs2 to addr in rs1 plus the 12-bit signed immediate.
@@ -2910,9 +3099,10 @@ fn exec_sh<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Shift Left Logical: Shift rs1 left by the by the lower 5 or 6 (RV32/64) bits in rs2 and place the result into rd.
@@ -2924,9 +3114,10 @@ fn exec_sll<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Shift Left Logical Immediate: Shift rs1 left by the 5 or 6 (RV32/64) bit (RV64) immediate and place the result into rd.
@@ -2938,9 +3129,10 @@ fn exec_slli<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     shamt: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Set Less Than: Set rd to 1 if rs1 is less than rs2, otherwise set rd to 0 (signed).
@@ -2952,9 +3144,10 @@ fn exec_slt<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Set Less Than Immediate: Set rd to 1 if rs1 is less than the sign-extended 12-bit immediate, otherwise set rd to 0 (signed).
@@ -2966,9 +3159,10 @@ fn exec_slti<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Set Less Than Immediate Unsigned: Set rd to 1 if rs1 is less than the sign-extended 12-bit immediate, otherwise set rd to 0 (unsigned).
@@ -2980,9 +3174,10 @@ fn exec_sltiu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Set Less Than Unsigned: Set rd to 1 if rs1 is less than rs2, otherwise set rd to 0 (unsigned).
@@ -2994,9 +3189,10 @@ fn exec_sltu<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Shift Right Arithmetic: Shift rs1 right by the by the lower 5 or 6 (RV32/64) bits in rs2 and place the result into rd while retaining the sign.
@@ -3008,9 +3204,10 @@ fn exec_sra<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Shift Right Arithmetic Immediate: Shift rs1 right by the 5 or 6 (RV32/64) bit immediate and place the result into rd while retaining the sign.
@@ -3022,17 +3219,22 @@ fn exec_srai<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     shamt: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // System Return: System Return returns to the supervisor mode privilege level after handling a trap.
 //
 // >
-fn exec_sret<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Instruction<Op, u32>) {
+fn exec_sret<Mem: Bus<u32>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    _inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Shift Right Logical: Shift rs1 right by the by the lower 5 or 6 (RV32/64) bits in rs2 and place the result into rd.
@@ -3044,9 +3246,10 @@ fn exec_srl<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Shift Right Logical Immediate: Shift rs1 right by the 5 or 6 (RV32/64) bit immediate and place the result into rd.
@@ -3058,9 +3261,10 @@ fn exec_srli<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     shamt: u32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Subtract: Subtract rs2 from rs1 and place the result into rd.
@@ -3072,9 +3276,10 @@ fn exec_sub<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Store Word: Store 32-bit value from the low bits of rs2 to addr in rs1 plus the 12-bit signed immediate.
@@ -3086,25 +3291,32 @@ fn exec_sw<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // User Return: .
 //
 // >
-fn exec_uret<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Instruction<Op, u32>) {
+fn exec_uret<Mem: Bus<u32>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    _inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Wait For Interrupt: Wait for Interrupt indicates the hart can be stalled until an interrupt needs servicing.
 //
 // >
-fn exec_wfi<Mem: Bus<u32>>(hart: &mut impl Hart<u32, u32, f64, Mem>, _inst: Instruction<Op, u32>) {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+fn exec_wfi<Mem: Bus<u32>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    _inst: Instruction<Op, u32>,
+) -> ExecStatus<u32> {
+    ExecStatus::WaitingForInterrupt
 }
 
 // Xor: Set rd to the bitwise xor of rs1 and rs2.
@@ -3116,9 +3328,10 @@ fn exec_xor<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     rs2: IntRegister,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }
 
 // Xor Immediate: Set rd to the bitwise xor of rs1 with the sign-extended 12-bit immediate.
@@ -3130,7 +3343,8 @@ fn exec_xori<Mem: Bus<u32>>(
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
-) {
+) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
 }

@@ -112,6 +112,31 @@ where
         // at all.
         self.exception(ExceptionCause::IllegalInstruction)
     }
+
+    /// Called when handling an "environment call" instruction, to give the
+    /// hart an opportunity to handle it.
+    ///
+    /// Returns `true` to indicate that the hart handled the environment call
+    /// itself (e.g. by switching its internal privilege level and switching to
+    /// an exception handler), or `false` to indicate that the call was made
+    /// from the hart's outermost execution environment and must therefore be
+    /// handled by the calling Rust program instead.
+    fn environment_call(&mut self, addr: Addr) -> bool {
+        // By default we let the caller handle it.
+        false
+    }
+
+    /// Called when handling an "environment break" instruction, to give the
+    /// hart an opportunity to handle it.
+    ///
+    /// Returns `true` to indicate that the hart handled the environment break
+    /// itself (e.g. by giving control to a debugger running inside the Hart
+    /// itself), or `false` to indicate that the break should be handled by the
+    /// calling Rust program instead.
+    fn environment_break(&mut self, addr: Addr) -> bool {
+        // By default we let the caller handle it.
+        false
+    }
 }
 
 /// An implementation of `Hart` representing a single-core, single-threaded
