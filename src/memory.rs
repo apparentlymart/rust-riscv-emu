@@ -36,6 +36,32 @@ pub enum MemoryError {
     PageFault,
 }
 
+impl MemoryError {
+    pub fn as_code_load_cause(self) -> crate::exception::ExceptionCause {
+        match self {
+            MemoryError::Misaligned => {
+                crate::exception::ExceptionCause::InstructionAddressMisaligned
+            }
+            MemoryError::AccessFault => crate::exception::ExceptionCause::InstructionAccessFault,
+            MemoryError::PageFault => crate::exception::ExceptionCause::InstructionPageFault,
+        }
+    }
+    pub fn as_data_load_cause(self) -> crate::exception::ExceptionCause {
+        match self {
+            MemoryError::Misaligned => crate::exception::ExceptionCause::LoadAddressMisaligned,
+            MemoryError::AccessFault => crate::exception::ExceptionCause::LoadAccessFault,
+            MemoryError::PageFault => crate::exception::ExceptionCause::LoadPageFault,
+        }
+    }
+    pub fn as_data_store_cause(self) -> crate::exception::ExceptionCause {
+        match self {
+            MemoryError::Misaligned => crate::exception::ExceptionCause::StoreAddressMisaligned,
+            MemoryError::AccessFault => crate::exception::ExceptionCause::StoreAccessFault,
+            MemoryError::PageFault => crate::exception::ExceptionCause::StorePageFault,
+        }
+    }
+}
+
 pub struct Memory<'b> {
     buf: &'b mut [u8],
     writable: bool,
