@@ -1,3 +1,4 @@
+use core::mem::size_of;
 use core::mem::transmute;
 
 pub type WordUnsigned = u32;
@@ -375,3 +376,18 @@ macro_rules! int_ops {
 }
 
 int_ops!(BitAnd, BitOr, Not, Shl, Shl, Shr, Shr, Add, Sub, Mul, Div, Rem);
+
+pub fn sign_extend(v: u32, width: usize) -> i32 {
+    // Our methodology here is to do a shift left followed by a shift right
+    // while interpreting the value as signed, and thus having the shift right
+    // do the necessary sign extension.
+    if width == 32 {
+        // Easy case: the number is already fully-specified
+        return unsafe { transmute::<u32, i32>(v) };
+    }
+    let shift = ((size_of::<u32>() * 8) - width) as usize;
+    let sv = unsafe { transmute::<u32, i32>(v) };
+    let shifted = sv << shift;
+    let unshifted = shifted >> shift;
+    return unshifted;
+}
