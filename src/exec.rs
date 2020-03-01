@@ -3,6 +3,7 @@ mod exec_32;
 pub use exec_32::step_rv32;
 
 /// Represents the outcome of perfoming one or more execution steps on a Hart.
+#[derive(Debug)]
 pub enum ExecStatus<Addr> {
     /// Indicates that the hart is ready to take one or more additional steps
     /// with no external stimulus or response.
