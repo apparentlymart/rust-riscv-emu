@@ -7,7 +7,7 @@ use crate::instruction::Instruction;
 use crate::instruction::OperationRV32;
 use crate::memory::{Bus, MemoryError};
 use crate::raw_instruction::RawInstruction;
-use crate::register::{FloatRegister, IntRegister};
+use crate::register::{ControlStatusRegister, FloatRegister, IntRegister};
 
 type Op = OperationRV32;
 
@@ -1353,8 +1353,19 @@ fn exec_csrrs<Mem: Bus<u32>>(
     rs1: IntRegister,
     csr: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    if rs1.num() == 0 {
+        match hart.read_csr(ControlStatusRegister::numbered(csr as usize)) {
+            Ok(result) => {
+                hart.write_int_register(rd, u32::from_unsigned(result));
+            }
+            Err(e) => {
+                hart.exception(ExceptionCause::IllegalInstruction);
+            }
+        };
+    } else {
+        // TODO: Implement the atomic read/or/write behavior for other rs1 registers
+        hart.exception(ExceptionCause::IllegalInstruction);
+    }
     ExecStatus::Running
 }
 
