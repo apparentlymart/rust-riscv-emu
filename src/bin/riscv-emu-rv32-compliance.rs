@@ -32,8 +32,11 @@ fn exec_raw_program(mut img: Vec<u8>) {
 
     let mut steps = 0;
     loop {
-        if steps > 512 {
-            panic!("test program is still running after 4096 steps, so aborting");
+        if steps >= 64 {
+            panic!(
+                "test program is still running after {} steps, so aborting",
+                steps
+            );
         }
         let pc = hart.read_pc();
         hart.with_memory(|mem| match mem.read_word(pc) {
