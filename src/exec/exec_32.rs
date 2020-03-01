@@ -767,8 +767,7 @@ fn exec_c_add<Mem: Bus<u32>>(
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    exec_add(hart, inst, rs1rd, rs1rd, rs2);
-    ExecStatus::Running
+    exec_add(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // : .
@@ -780,8 +779,7 @@ fn exec_c_addi<Mem: Bus<u32>>(
     rs1rd: IntRegister,
     nzsimm: i32,
 ) -> ExecStatus<u32> {
-    exec_addi(hart, inst, rs1rd, rs1rd, nzsimm);
-    ExecStatus::Running
+    exec_addi(hart, inst, rs1rd, rs1rd, nzsimm)
 }
 
 // : .
@@ -789,13 +787,11 @@ fn exec_c_addi<Mem: Bus<u32>>(
 // >
 fn exec_c_addi16sp<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzsimm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_addi(hart, inst, rs1rd, rs1rd, nzsimm)
 }
 
 // : .
@@ -803,7 +799,7 @@ fn exec_c_addi16sp<Mem: Bus<u32>>(
 // >
 fn exec_c_addi4spn<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     nzuimm: u32,
 ) -> ExecStatus<u32> {
@@ -831,13 +827,11 @@ fn exec_c_addw<Mem: Bus<u32>>(
 // >
 fn exec_c_and<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_and(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // : .
@@ -845,13 +839,11 @@ fn exec_c_and<Mem: Bus<u32>>(
 // >
 fn exec_c_andi<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     nzsimm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_andi(hart, inst, rs1rd, rs1rd, nzsimm)
 }
 
 // : .
@@ -887,11 +879,9 @@ fn exec_c_bnez<Mem: Bus<u32>>(
 // >
 fn exec_c_ebreak<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_ebreak(hart, inst)
 }
 
 // : .
@@ -1151,13 +1141,11 @@ fn exec_c_nop<Mem: Bus<u32>>(
 // >
 fn exec_c_or<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_or(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // : .
@@ -1207,13 +1195,11 @@ fn exec_c_srli<Mem: Bus<u32>>(
 // >
 fn exec_c_sub<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_sub(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // : .
@@ -1221,13 +1207,11 @@ fn exec_c_sub<Mem: Bus<u32>>(
 // >
 fn exec_c_subw<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_sub(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // : .
@@ -1264,13 +1248,11 @@ fn exec_c_swsp<Mem: Bus<u32>>(
 // >
 fn exec_c_xor<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_xor(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // CSR Atomic Clear Bit: CSR Atomic Clear Bit reads the CSR, clears CSR bits set in rs1, and writes previous value to rd.
