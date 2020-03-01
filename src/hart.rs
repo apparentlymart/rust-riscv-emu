@@ -308,6 +308,8 @@ where
 
     fn read_csr(&self, reg: ControlStatusRegister) -> Result<ISA::Int, CSRError> {
         match reg.num() {
+            0x0F14 => Ok(ISA::Int::zero()), // mhartid (always zero for single-threaded)
+
             // TODO: Implement the CSRs that we have in SingleThreadUserHartCSRs
             _ => Err(CSRError::Unsupported),
         }
