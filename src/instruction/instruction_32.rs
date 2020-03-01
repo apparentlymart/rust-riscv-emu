@@ -1063,6 +1063,12 @@ pub enum OperationRV32 {
 impl OperationRV32 {
     pub fn decode_from_raw(raw: RawInstruction) -> Self {
         let opcode = raw.opcode();
+        if opcode == 0x00 || opcode == 0xff {
+            // All-zeros and all-ones are reserved as invalid opcodes in the
+            // RISC-V spec, regardless of whether they might match any patterns
+            // below.
+            return Self::Invalid;
+        }
         if opcode == (Opcode::Amo as u8) {
             if raw.matches(
                 0b11111000000000000111000001111111,
