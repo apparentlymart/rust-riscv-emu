@@ -791,7 +791,7 @@ fn exec_bne<Mem: Bus<u32>>(
 ) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1).to_unsigned();
     let b = hart.read_int_register(rs2).to_unsigned();
-    if a == b {
+    if a != b {
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
