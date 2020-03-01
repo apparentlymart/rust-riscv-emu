@@ -2777,13 +2777,18 @@ fn exec_jal<Mem: Bus<u32>>(
 // > rd ← pc + length(inst) ; pc ← (rs1 + imm) ∧ -2
 fn exec_jalr<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    let ret_addr = inst.pc + (inst.length as u32);
+    hart.write_int_register(rd, u32::from_unsigned(ret_addr));
+
+    let base_addr = hart.read_int_register(rs1).to_unsigned();
+    let target_addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
+    hart.write_pc(target_addr);
+
     ExecStatus::Running
 }
 
