@@ -459,11 +459,9 @@ fn exec_add<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_signed();
-    let b = hart.read_int_register(rs2).to_signed();
-    let result = a.wrapping_add(b);
-    hart.write_int_register(rd, u32::from_signed(result));
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        u32::from_signed(a.to_signed().wrapping_add(b.to_signed()))
+    })
 }
 
 // Add Immediate: Add sign-extended 12-bit immediate to register rs1 and place the result in rd.
@@ -476,11 +474,9 @@ fn exec_addi<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_signed();
-    let b = simm;
-    let result = a.wrapping_add(b);
-    hart.write_int_register(rd, u32::from_signed(result));
-    ExecStatus::Running
+    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| {
+        u32::from_signed(a.to_signed().wrapping_add(b.to_signed()))
+    })
 }
 
 // Atomic Add Word: Load word from address in rs1 into rd, add rd and rs2, write the result to the address in rs1.
@@ -646,11 +642,7 @@ fn exec_and<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_unsigned();
-    let b = hart.read_int_register(rs2).to_unsigned();
-    let result = a & b;
-    hart.write_int_register(rd, u32::from_unsigned(result));
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| a & b)
 }
 
 // And Immediate: Set rd to the bitwise and of rs1 with the sign-extended 12-bit immediate.
@@ -663,11 +655,7 @@ fn exec_andi<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_unsigned();
-    let b = u32::from_signed(simm).to_unsigned();
-    let result = a & b;
-    hart.write_int_register(rd, u32::from_unsigned(result));
-    ExecStatus::Running
+    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| a & b)
 }
 
 // Add Upper Immediate to PC: Place the PC plus the 20-bit signed immediate (shited 12 bits left) into rd (used before JALR).
@@ -694,13 +682,7 @@ fn exec_beq<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_unsigned();
-    let b = hart.read_int_register(rs2).to_unsigned();
-    if a == b {
-        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-        hart.write_pc(new_pc);
-    }
-    ExecStatus::Running
+    exec_branch_binary_cond(hart, inst, rs1, rs2, simm, |a, b| a == b)
 }
 
 // Branch Greater than Equal: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 >= rs2 (signed).
@@ -713,13 +695,9 @@ fn exec_bge<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_signed();
-    let b = hart.read_int_register(rs2).to_signed();
-    if a >= b {
-        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-        hart.write_pc(new_pc);
-    }
-    ExecStatus::Running
+    exec_branch_binary_cond(hart, inst, rs1, rs2, simm, |a, b| {
+        a.to_signed() >= b.to_signed()
+    })
 }
 
 // Branch Greater than Equal Unsigned: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 >= rs2 (unsigned).
@@ -732,13 +710,9 @@ fn exec_bgeu<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_unsigned();
-    let b = hart.read_int_register(rs2).to_unsigned();
-    if a >= b {
-        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-        hart.write_pc(new_pc);
-    }
-    ExecStatus::Running
+    exec_branch_binary_cond(hart, inst, rs1, rs2, simm, |a, b| {
+        a.to_unsigned() >= b.to_unsigned()
+    })
 }
 
 // Branch Less Than: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 < rs2 (signed).
@@ -751,13 +725,9 @@ fn exec_blt<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_signed();
-    let b = hart.read_int_register(rs2).to_signed();
-    if a < b {
-        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-        hart.write_pc(new_pc);
-    }
-    ExecStatus::Running
+    exec_branch_binary_cond(hart, inst, rs1, rs2, simm, |a, b| {
+        a.to_signed() < b.to_signed()
+    })
 }
 
 // Branch Less Than Unsigned: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 < rs2 (unsigned).
@@ -770,13 +740,9 @@ fn exec_bltu<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_unsigned();
-    let b = hart.read_int_register(rs2).to_unsigned();
-    if a < b {
-        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-        hart.write_pc(new_pc);
-    }
-    ExecStatus::Running
+    exec_branch_binary_cond(hart, inst, rs1, rs2, simm, |a, b| {
+        a.to_unsigned() < b.to_unsigned()
+    })
 }
 
 // Branch Not Equal: Branch to PC relative 12-bit signed immediate (shifted 1 bit left) if rs1 != rs2.
@@ -789,13 +755,7 @@ fn exec_bne<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let a = hart.read_int_register(rs1).to_unsigned();
-    let b = hart.read_int_register(rs2).to_unsigned();
-    if a != b {
-        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
-        hart.write_pc(new_pc);
-    }
-    ExecStatus::Running
+    exec_branch_binary_cond(hart, inst, rs1, rs2, simm, |a, b| a != b)
 }
 
 // : .
@@ -3376,5 +3336,50 @@ fn exec_xori<Mem: Bus<u32>>(
 ) -> ExecStatus<u32> {
     // TODO: Implement
     hart.exception(ExceptionCause::IllegalInstruction);
+    ExecStatus::Running
+}
+
+fn exec_binary_op<Mem: Bus<u32>, F: FnOnce(u32, u32) -> u32>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    rd: IntRegister,
+    rs1: IntRegister,
+    rs2: IntRegister,
+    callback: F,
+) -> ExecStatus<u32> {
+    let a = hart.read_int_register(rs1);
+    let b = hart.read_int_register(rs2);
+    let result = callback(a, b);
+    hart.write_int_register(rd, result);
+    ExecStatus::Running
+}
+
+fn exec_binary_op_imm<Mem: Bus<u32>, F: FnOnce(u32, u32) -> u32>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    rd: IntRegister,
+    rs1: IntRegister,
+    imm: u32,
+    callback: F,
+) -> ExecStatus<u32> {
+    let a = hart.read_int_register(rs1);
+    let b = imm;
+    let result = callback(a, b);
+    hart.write_int_register(rd, result);
+    ExecStatus::Running
+}
+
+fn exec_branch_binary_cond<Mem: Bus<u32>, F: FnOnce(u32, u32) -> bool>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    inst: Instruction<Op, u32>,
+    rs1: IntRegister,
+    rs2: IntRegister,
+    simm: i32,
+    callback: F,
+) -> ExecStatus<u32> {
+    let a = hart.read_int_register(rs1);
+    let b = hart.read_int_register(rs2);
+    if callback(a, b) {
+        let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
+        hart.write_pc(new_pc);
+    }
     ExecStatus::Running
 }
