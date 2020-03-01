@@ -19,7 +19,7 @@ pub use exception::{Cause, ExceptionCause, InterruptCause};
 pub use hart::{Hart, SingleThreadUserHart};
 pub use instruction::{Instruction, Operation};
 pub use isa::BaseISA;
-pub use memory::{AddressConverter, Bus, Memory};
+pub use memory::{AddressConverter, AddressTransformer, Bus, Memory};
 pub use raw_instruction::RawInstruction;
 pub use register::{ControlStatusRegister, FloatRegister, IntRegister, Register};
 

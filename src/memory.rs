@@ -189,6 +189,119 @@ impl<'b> Bus<usize> for Memory<'b> {
     }
 }
 
+/// Wraps another `Bus` and uses a provided function to adjust incoming
+/// addresses before calling the wrapped bus.
+pub struct AddressTransformer<Addr, Wrapped, Callback>
+where
+    Wrapped: Bus<Addr>,
+    Callback: Fn(Addr) -> Result<Addr, MemoryError>,
+{
+    wrapped: Wrapped,
+    callback: Callback,
+    phantom_addr: core::marker::PhantomData<Addr>,
+}
+
+impl<Addr, Wrapped, Callback> AddressTransformer<Addr, Wrapped, Callback>
+where
+    Wrapped: Bus<Addr>,
+    Callback: Fn(Addr) -> Result<Addr, MemoryError>,
+{
+    // Consumes a bus and produces a wrapping `AddressTransformer` that will
+    // adjust incoming addresses using the given function before passing
+    // them on to the wrapped bus.
+    //
+    // If the callback returns an error, the underlying bus will not be called
+    // at all and the error will be returned instead.
+    pub fn new(mut wrapped: Wrapped, callback: Callback) -> Self {
+        Self {
+            wrapped: wrapped,
+            callback: callback,
+            phantom_addr: core::marker::PhantomData,
+        }
+    }
+
+    pub fn translate_address(&self, addr: Addr) -> Result<Addr, MemoryError> {
+        let callback = &self.callback;
+        callback(addr)
+    }
+}
+
+impl<Addr, Wrapped, Callback> Bus<Addr> for AddressTransformer<Addr, Wrapped, Callback>
+where
+    Wrapped: Bus<Addr>,
+    Callback: Fn(Addr) -> Result<Addr, MemoryError>,
+{
+    fn read_byte(&mut self, addr: Addr) -> Result<Byte, MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.read_byte(addr),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn read_halfword(&mut self, addr: Addr) -> Result<Halfword, MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.read_halfword(addr),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn read_word(&mut self, addr: Addr) -> Result<Word, MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.read_word(addr),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn read_longword(&mut self, addr: Addr) -> Result<Longword, MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.read_longword(addr),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn read_quadword(&mut self, addr: Addr) -> Result<Quadword, MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.read_quadword(addr),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn write_byte(&mut self, addr: Addr, data: Byte) -> Result<(), MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.write_byte(addr, data),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn write_halfword(&mut self, addr: Addr, data: Halfword) -> Result<(), MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.write_halfword(addr, data),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn write_word(&mut self, addr: Addr, data: Word) -> Result<(), MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.write_word(addr, data),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn write_longword(&mut self, addr: Addr, data: Longword) -> Result<(), MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.write_longword(addr, data),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn write_quadword(&mut self, addr: Addr, data: Quadword) -> Result<(), MemoryError> {
+        match self.translate_address(addr) {
+            Ok(addr) => self.wrapped.write_quadword(addr, data),
+            Err(e) => Err(e),
+        }
+    }
+}
+
 /// Adapter type for wrapping a Bus that expects one address type to make it
 /// appear instead as a Bus for another address type, as long as a conversion
 /// is available from the "outer" address type to the "inner" address type.
