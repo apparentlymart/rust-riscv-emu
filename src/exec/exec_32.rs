@@ -3295,8 +3295,10 @@ fn exec_sub<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    let a = hart.read_int_register(rs1).to_signed();
+    let b = hart.read_int_register(rs2).to_signed();
+    let result = a.wrapping_sub(b);
+    hart.write_int_register(rd, u32::from_signed(result));
     ExecStatus::Running
 }
 
