@@ -1464,9 +1464,9 @@ fn exec_ebreak<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
 ) -> ExecStatus<u32> {
     if !hart.environment_break(inst.pc) {
-        ExecStatus::Running
-    } else {
         ExecStatus::EnvironmentBreak(inst.pc)
+    } else {
+        ExecStatus::Running
     }
 }
 
@@ -1478,9 +1478,9 @@ fn exec_ecall<Mem: Bus<u32>>(
     inst: Instruction<Op, u32>,
 ) -> ExecStatus<u32> {
     if !hart.environment_call(inst.pc) {
-        ExecStatus::Running
-    } else {
         ExecStatus::EnvironmentCall(inst.pc)
+    } else {
+        ExecStatus::Running
     }
 }
 
