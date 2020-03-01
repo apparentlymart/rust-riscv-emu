@@ -2885,8 +2885,7 @@ fn exec_lui<Mem: Bus<u32>>(
     rd: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    hart.write_int_register(rd, u32::from_signed(simm));
     ExecStatus::Running
 }
 
@@ -2900,8 +2899,16 @@ fn exec_lw<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    let base_addr = hart.read_int_register(rs1).to_unsigned();
+    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
+    let result = hart.with_memory(|mem| mem.read_word(addr));
+    match result {
+        Ok(v) => {
+            let sv = sign_extend(v as u32, 32);
+            hart.write_int_register(rd, u32::from_signed(sv))
+        }
+        Err(e) => hart.exception(e.as_data_load_cause()),
+    };
     ExecStatus::Running
 }
 
@@ -3303,8 +3310,13 @@ fn exec_sw<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
+    let v = hart.read_int_register(rs2).to_unsigned();
+    let base_addr = hart.read_int_register(rs1).to_unsigned();
+    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
+    match hart.with_memory(|mem| mem.write_word(addr, v)) {
+        Ok(_) => {}
+        Err(e) => hart.exception(e.as_data_store_cause()),
+    }
     ExecStatus::Running
 }
 
