@@ -3092,9 +3092,13 @@ fn exec_slt<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        if a.to_signed() < b.to_signed() {
+            1
+        } else {
+            0
+        }
+    })
 }
 
 // Set Less Than Immediate: Set rd to 1 if rs1 is less than the sign-extended 12-bit immediate, otherwise set rd to 0 (signed).
@@ -3107,9 +3111,19 @@ fn exec_slti<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op_imm(
+        hart,
+        rd,
+        rs1,
+        simm,
+        |a, b| {
+            if a.to_signed() < b {
+                1
+            } else {
+                0
+            }
+        },
+    )
 }
 
 // Set Less Than Immediate Unsigned: Set rd to 1 if rs1 is less than the sign-extended 12-bit immediate, otherwise set rd to 0 (unsigned).
@@ -3122,9 +3136,13 @@ fn exec_sltiu<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op_imm(hart, rd, rs1, simm, |a, b| {
+        if a.to_unsigned() < u32::from_signed(b).to_unsigned() {
+            1
+        } else {
+            0
+        }
+    })
 }
 
 // Set Less Than Unsigned: Set rd to 1 if rs1 is less than rs2, otherwise set rd to 0 (unsigned).
@@ -3137,9 +3155,13 @@ fn exec_sltu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        if a.to_unsigned() < b.to_unsigned() {
+            1
+        } else {
+            0
+        }
+    })
 }
 
 // Shift Right Arithmetic: Shift rs1 right by the by the lower 5 or 6 (RV32/64) bits in rs2 and place the result into rd while retaining the sign.
