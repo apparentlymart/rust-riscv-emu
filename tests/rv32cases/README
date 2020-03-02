@@ -1,0 +1,17 @@
+The files in this directory are initial memory images for RV32 test programs
+that expect to be loaded at address 0x80000000 and execution started with
+the PC also set to 0x80000000.
+
+Each one reserves a portion of memory to write results into. After execution
+completes (signalled with an ecall instruction), the results area must match
+the reference values in the ".want" file given alongside each ".bin".
+
+------
+
+You can inspect the equivalent assembly for one of the binary files in here
+by running objdump, like this:
+    riscv32-unknown-elf-objdump -b binary -m riscv --adjust-vma=0x80000000 -D tests/rv32cases/MUL.bin
+
+These images include the reserved space for the output signatures, initialized
+as 0xffffffff. Therefore the end of the disassembly will appear to include this
+sort of garbage after the terminal "ecall", which you can ignore.
