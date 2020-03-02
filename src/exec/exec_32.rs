@@ -2988,15 +2988,9 @@ fn exec_sb<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let v = hart.read_int_register(rs2).to_unsigned() as u8;
-    let base_addr = hart.read_int_register(rs1).to_unsigned();
-    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
-    let result = hart.with_memory(|mem| mem.write_byte(addr, v));
-    match result {
-        Ok(_) => {}
-        Err(e) => hart.exception(e.as_data_store_cause()),
-    };
-    ExecStatus::Running
+    exec_store_mem(hart, rs1, rs2, simm, |mem, addr, v| {
+        mem.write_byte(addr, v.to_unsigned() as u8)
+    })
 }
 
 // Store Conditional Word: Write word in rs1 to the address in rs2 if a valid reservation exists, write 0 on success or 1 on failure to rd.
@@ -3052,9 +3046,9 @@ fn exec_sh<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_store_mem(hart, rs1, rs2, simm, |mem, addr, v| {
+        mem.write_halfword(addr, v.to_unsigned() as u16)
+    })
 }
 
 // Shift Left Logical: Shift rs1 left by the by the lower 5 or 6 (RV32/64) bits in rs2 and place the result into rd.
@@ -3246,14 +3240,9 @@ fn exec_sw<Mem: Bus<u32>>(
     rs2: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let v = hart.read_int_register(rs2).to_unsigned();
-    let base_addr = hart.read_int_register(rs1).to_unsigned();
-    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
-    match hart.with_memory(|mem| mem.write_word(addr, v)) {
-        Ok(_) => {}
-        Err(e) => hart.exception(e.as_data_store_cause()),
-    }
-    ExecStatus::Running
+    exec_store_mem(hart, rs1, rs2, simm, |mem, addr, v| {
+        mem.write_word(addr, v.to_unsigned())
+    })
 }
 
 // User Return: .
@@ -3366,6 +3355,24 @@ fn exec_load_mem<Mem: Bus<u32>, F: FnOnce(&mut Mem, u32) -> Result<u32, MemoryEr
     match result {
         Ok(v) => hart.write_int_register(rd, v),
         Err(e) => hart.exception(e.as_data_load_cause()),
+    };
+    ExecStatus::Running
+}
+
+fn exec_store_mem<Mem: Bus<u32>, F: FnOnce(&mut Mem, u32, u32) -> Result<(), MemoryError>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    rs1: IntRegister,
+    rs2: IntRegister,
+    simm: i32,
+    callback: F,
+) -> ExecStatus<u32> {
+    let v = hart.read_int_register(rs2);
+    let base_addr = hart.read_int_register(rs1).to_unsigned();
+    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
+    let result = hart.with_memory(|mem| callback(mem, addr, v));
+    match result {
+        Ok(_) => {}
+        Err(e) => hart.exception(e.as_data_store_cause()),
     };
     ExecStatus::Running
 }
