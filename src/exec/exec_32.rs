@@ -2744,17 +2744,11 @@ fn exec_lb<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let base_addr = hart.read_int_register(rs1).to_unsigned();
-    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
-    let result = hart.with_memory(|mem| mem.read_byte(addr));
-    match result {
-        Ok(v) => {
-            let sv = sign_extend(v as u32, 8);
-            hart.write_int_register(rd, u32::from_signed(sv))
-        }
-        Err(e) => hart.exception(e.as_data_load_cause()),
-    };
-    ExecStatus::Running
+    exec_load_mem(hart, rd, rs1, simm, |mem, addr| {
+        let v = mem.read_byte(addr)?;
+        let sv = sign_extend(v as u32, 8);
+        Ok(u32::from_signed(sv))
+    })
 }
 
 // Load Byte Unsigned: Load 8-bit value from addr in rs1 plus the 12-bit signed immediate and place zero-extended result into rd.
@@ -2767,14 +2761,10 @@ fn exec_lbu<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let base_addr = hart.read_int_register(rs1).to_unsigned();
-    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
-    let result = hart.with_memory(|mem| mem.read_byte(addr));
-    match result {
-        Ok(v) => hart.write_int_register(rd, u32::from_unsigned(v as u32)),
-        Err(e) => hart.exception(e.as_data_load_cause()),
-    };
-    ExecStatus::Running
+    exec_load_mem(hart, rd, rs1, simm, |mem, addr| {
+        let v = mem.read_byte(addr)?;
+        Ok(u32::from_unsigned(v as u32))
+    })
 }
 
 // Load Half: Load 16-bit value from addr in rs1 plus the 12-bit signed immediate and place sign-extended result into rd.
@@ -2787,9 +2777,11 @@ fn exec_lh<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_load_mem(hart, rd, rs1, simm, |mem, addr| {
+        let v = mem.read_halfword(addr)?;
+        let sv = sign_extend(v as u32, 16);
+        Ok(u32::from_signed(sv))
+    })
 }
 
 // Load Half Unsigned: Load 32-bit value from addr in rs1 plus the 12-bit signed immediate and place zero-extended result into rd.
@@ -2802,9 +2794,10 @@ fn exec_lhu<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_load_mem(hart, rd, rs1, simm, |mem, addr| {
+        let v = mem.read_halfword(addr)?;
+        Ok(u32::from_unsigned(v as u32))
+    })
 }
 
 // Load Reserved Word: Load word from address in rs1, place the sign-extended result in rd and register a reservation on the memory word.
@@ -2846,17 +2839,11 @@ fn exec_lw<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let base_addr = hart.read_int_register(rs1).to_unsigned();
-    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
-    let result = hart.with_memory(|mem| mem.read_word(addr));
-    match result {
-        Ok(v) => {
-            let sv = sign_extend(v as u32, 32);
-            hart.write_int_register(rd, u32::from_signed(sv))
-        }
-        Err(e) => hart.exception(e.as_data_load_cause()),
-    };
-    ExecStatus::Running
+    exec_load_mem(hart, rd, rs1, simm, |mem, addr| {
+        let v = mem.read_word(addr)?;
+        let sv = sign_extend(v as u32, 32);
+        Ok(u32::from_signed(sv))
+    })
 }
 
 // Machine-Mode Return: .
@@ -3363,5 +3350,22 @@ fn exec_branch_binary_cond<Mem: Bus<u32>, F: FnOnce(u32, u32) -> bool>(
         let new_pc = inst.pc.wrapping_add(u32::from_signed(simm).to_unsigned());
         hart.write_pc(new_pc);
     }
+    ExecStatus::Running
+}
+
+fn exec_load_mem<Mem: Bus<u32>, F: FnOnce(&mut Mem, u32) -> Result<u32, MemoryError>>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    rd: IntRegister,
+    rs1: IntRegister,
+    simm: i32,
+    callback: F,
+) -> ExecStatus<u32> {
+    let base_addr = hart.read_int_register(rs1).to_unsigned();
+    let addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
+    let result = hart.with_memory(|mem| callback(mem, addr));
+    match result {
+        Ok(v) => hart.write_int_register(rd, v),
+        Err(e) => hart.exception(e.as_data_load_cause()),
+    };
     ExecStatus::Running
 }
