@@ -474,8 +474,8 @@ fn exec_addi<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| {
-        u32::from_signed(a.to_signed().wrapping_add(b.to_signed()))
+    exec_binary_op_imm(hart, rd, rs1, simm, |a, b| {
+        u32::from_signed(a.to_signed().wrapping_add(b))
     })
 }
 
@@ -655,7 +655,7 @@ fn exec_andi<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| a & b)
+    exec_binary_op_imm(hart, rd, rs1, simm, |a, b| a & u32::from_signed(b))
 }
 
 // Add Upper Immediate to PC: Place the PC plus the 20-bit signed immediate (shited 12 bits left) into rd (used before JALR).
@@ -2943,8 +2943,8 @@ fn exec_ori<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| {
-        u32::from_unsigned(a.to_unsigned() | b.to_unsigned())
+    exec_binary_op_imm(hart, rd, rs1, simm, |a, b| {
+        u32::from_unsigned(a.to_unsigned() | u32::from_signed(b))
     })
 }
 
@@ -3061,9 +3061,10 @@ fn exec_sll<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let shamt = b.to_unsigned() & 0b11111;
+        u32::from_unsigned(a.to_unsigned() << shamt)
+    })
 }
 
 // Shift Left Logical Immediate: Shift rs1 left by the 5 or 6 (RV32/64) bit (RV64) immediate and place the result into rd.
@@ -3076,9 +3077,9 @@ fn exec_slli<Mem: Bus<u32>>(
     rs1: IntRegister,
     shamt: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_shift_op_imm(hart, rd, rs1, shamt, |a, shamt| {
+        u32::from_unsigned(a.to_unsigned() << shamt)
+    })
 }
 
 // Set Less Than: Set rd to 1 if rs1 is less than rs2, otherwise set rd to 0 (signed).
@@ -3151,9 +3152,10 @@ fn exec_sra<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let shamt = b.to_unsigned() & 0b11111;
+        u32::from_signed(a.to_signed() >> shamt)
+    })
 }
 
 // Shift Right Arithmetic Immediate: Shift rs1 right by the 5 or 6 (RV32/64) bit immediate and place the result into rd while retaining the sign.
@@ -3166,9 +3168,9 @@ fn exec_srai<Mem: Bus<u32>>(
     rs1: IntRegister,
     shamt: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_shift_op_imm(hart, rd, rs1, shamt, |a, shamt| {
+        u32::from_signed(a.to_signed() >> shamt)
+    })
 }
 
 // System Return: System Return returns to the supervisor mode privilege level after handling a trap.
@@ -3193,9 +3195,10 @@ fn exec_srl<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let shamt = b.to_unsigned() & 0b11111;
+        u32::from_unsigned(a.to_unsigned() >> shamt)
+    })
 }
 
 // Shift Right Logical Immediate: Shift rs1 right by the 5 or 6 (RV32/64) bit immediate and place the result into rd.
@@ -3208,9 +3211,9 @@ fn exec_srli<Mem: Bus<u32>>(
     rs1: IntRegister,
     shamt: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_shift_op_imm(hart, rd, rs1, shamt, |a, shamt| {
+        u32::from_unsigned(a.to_unsigned() >> shamt)
+    })
 }
 
 // Subtract: Subtract rs2 from rs1 and place the result into rd.
@@ -3292,8 +3295,8 @@ fn exec_xori<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| {
-        u32::from_unsigned(a.to_unsigned() ^ b.to_unsigned())
+    exec_binary_op_imm(hart, rd, rs1, simm, |a, b| {
+        u32::from_unsigned(a.to_unsigned() ^ u32::from_signed(b))
     })
 }
 
@@ -3311,15 +3314,29 @@ fn exec_binary_op<Mem: Bus<u32>, F: FnOnce(u32, u32) -> u32>(
     ExecStatus::Running
 }
 
-fn exec_binary_op_imm<Mem: Bus<u32>, F: FnOnce(u32, u32) -> u32>(
+fn exec_binary_op_imm<Mem: Bus<u32>, F: FnOnce(u32, i32) -> u32>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
     rd: IntRegister,
     rs1: IntRegister,
-    imm: u32,
+    imm: i32,
     callback: F,
 ) -> ExecStatus<u32> {
     let a = hart.read_int_register(rs1);
     let b = imm;
+    let result = callback(a, b);
+    hart.write_int_register(rd, result);
+    ExecStatus::Running
+}
+
+fn exec_shift_op_imm<Mem: Bus<u32>, F: FnOnce(u32, u32) -> u32>(
+    hart: &mut impl Hart<u32, u32, f64, Mem>,
+    rd: IntRegister,
+    rs1: IntRegister,
+    shamt: u32,
+    callback: F,
+) -> ExecStatus<u32> {
+    let a = hart.read_int_register(rs1);
+    let b = shamt;
     let result = callback(a, b);
     hart.write_int_register(rd, result);
     ExecStatus::Running
