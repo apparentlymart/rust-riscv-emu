@@ -2928,9 +2928,9 @@ fn exec_or<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        u32::from_unsigned(a.to_unsigned() | b.to_unsigned())
+    })
 }
 
 // Or Immediate: Set rd to the bitwise or of rs1 with the sign-extended 12-bit immediate.
@@ -2943,9 +2943,9 @@ fn exec_ori<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| {
+        u32::from_unsigned(a.to_unsigned() | b.to_unsigned())
+    })
 }
 
 // Remainder Signed: Divide rs1 (dividend) by rs2 (divisor) and place the remainder in rd (signed).
@@ -3277,9 +3277,9 @@ fn exec_xor<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        u32::from_unsigned(a.to_unsigned() ^ b.to_unsigned())
+    })
 }
 
 // Xor Immediate: Set rd to the bitwise xor of rs1 with the sign-extended 12-bit immediate.
@@ -3292,9 +3292,9 @@ fn exec_xori<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op_imm(hart, rd, rs1, u32::from_signed(simm), |a, b| {
+        u32::from_unsigned(a.to_unsigned() ^ b.to_unsigned())
+    })
 }
 
 fn exec_binary_op<Mem: Bus<u32>, F: FnOnce(u32, u32) -> u32>(
