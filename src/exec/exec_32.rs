@@ -2724,12 +2724,13 @@ fn exec_jalr<Mem: Bus<u32>>(
     rs1: IntRegister,
     simm: i32,
 ) -> ExecStatus<u32> {
-    let ret_addr = inst.pc + (inst.length as u32);
-    hart.write_int_register(rd, u32::from_unsigned(ret_addr));
-
     let base_addr = hart.read_int_register(rs1).to_unsigned();
-    let target_addr = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned());
-    hart.write_pc(target_addr);
+    let new_pc = base_addr.wrapping_add(u32::from_signed(simm).to_unsigned())
+        & 0b11111111111111111111111111111110;
+    hart.write_pc(new_pc);
+
+    let ret_pc = inst.pc.wrapping_add(inst.length as u32);
+    hart.write_int_register(rd, u32::from_unsigned(ret_pc));
 
     ExecStatus::Running
 }
