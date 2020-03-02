@@ -11,19 +11,77 @@ use riscv_emu::{AddressConverter, AddressTransformer, Bus, Memory};
 use riscv_emu::{Hart, SingleThreadUserHart};
 
 macro_rules! rv32case {
-    ($filename:ident) => {
+    ($filename:ident, $result_base:expr) => {
         #[test]
         fn $filename() {
             test_case(
                 include_bytes!(concat!("rv32cases/", stringify!($filename), ".bin")),
                 include_bytes!(concat!("rv32cases/", stringify!($filename), ".want")),
-                0x80002000,
+                $result_base,
             );
         }
     };
 }
 
-rv32case!(MUL);
+// Tests for the "I" integer base ISA
+rv32case!(I_ADDI_01, 0x80002000);
+rv32case!(I_ADD_01, 0x80002000);
+rv32case!(I_ANDI_01, 0x80002000);
+rv32case!(I_AND_01, 0x80002000);
+rv32case!(I_AUIPC_01, 0x80002000);
+rv32case!(I_BEQ_01, 0x80002000);
+rv32case!(I_BGEU_01, 0x80002000);
+rv32case!(I_BGE_01, 0x80002000);
+rv32case!(I_BLTU_01, 0x80002000);
+rv32case!(I_BLT_01, 0x80002000);
+rv32case!(I_BNE_01, 0x80002000);
+rv32case!(I_DELAY_SLOTS_01, 0x80002000);
+//rv32case!(I_EBREAK_01, 0x80002000); // (requires exception handling)
+//rv32case!(I_ECALL_01, 0x80002000); // (requires exception handling)
+rv32case!(I_ENDIANESS_01, 0x80002010);
+rv32case!(I_IO, 0x80002030);
+rv32case!(I_JALR_01, 0x80002000);
+rv32case!(I_JAL_01, 0x80002000);
+rv32case!(I_LBU_01, 0x80002030);
+rv32case!(I_LB_01, 0x80002030);
+rv32case!(I_LHU_01, 0x80002030);
+rv32case!(I_LH_01, 0x80002030);
+rv32case!(I_LUI_01, 0x80002000);
+rv32case!(I_LW_01, 0x80002030);
+//rv32case!(I_MISALIGN_JMP_01, 0x80002000); // (requires exception handling)
+//rv32case!(I_MISALIGN_LDST_01, 0x80002010); // (requires exception handling)
+rv32case!(I_NOP_01, 0x80002000);
+rv32case!(I_ORI_01, 0x80002000);
+rv32case!(I_OR_01, 0x80002000);
+rv32case!(I_RF_size_01, 0x80002000);
+rv32case!(I_RF_width_01, 0x80002000);
+rv32case!(I_RF_x0_01, 0x80002010);
+rv32case!(I_SB_01, 0x80002000);
+rv32case!(I_SH_01, 0x80002000);
+rv32case!(I_SLLI_01, 0x80002000);
+rv32case!(I_SLL_01, 0x80002000);
+rv32case!(I_SLTIU_01, 0x80002000);
+rv32case!(I_SLTI_01, 0x80002000);
+rv32case!(I_SLTU_01, 0x80002000);
+rv32case!(I_SLT_01, 0x80002000);
+rv32case!(I_SRAI_01, 0x80002000);
+rv32case!(I_SRA_01, 0x80002000);
+rv32case!(I_SRLI_01, 0x80002000);
+rv32case!(I_SRL_01, 0x80002000);
+rv32case!(I_SUB_01, 0x80002000);
+rv32case!(I_SW_01, 0x80002000);
+rv32case!(I_XORI_01, 0x80002000);
+rv32case!(I_XOR_01, 0x80002000);
+
+// Tests for the "M" (Multiply) extension
+rv32case!(DIV, 0x80002000);
+rv32case!(DIVU, 0x80002000);
+rv32case!(MUL, 0x80002000);
+rv32case!(MULH, 0x80002000);
+rv32case!(MULHSU, 0x80002000);
+rv32case!(MULHU, 0x80002000);
+rv32case!(REM, 0x80002000);
+rv32case!(REMU, 0x80002000);
 
 fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
     let start_pc = 0x80000000;
@@ -74,6 +132,9 @@ fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
     let mut test_idx = 0;
     let mut result_idx = 0;
     let mut line_num = 1;
+    let mut mismatches = 0;
+    let mut total = 0;
+    let mut header = false;
     for line_result in io::BufReader::new(want_rd).lines() {
         if let Ok(line) = line_result {
             if line.len() == 0 {
@@ -84,37 +145,51 @@ fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
                 test_idx += 1;
                 result_idx = 0;
                 local_offset = 0;
+                header = false;
                 continue;
+            }
+
+            if !header {
+                println!("== Test {} results", test_idx);
+                header = true;
             }
 
             if let Ok(want) = u32::from_str_radix(&line, 16) {
                 hart.with_memory(|mem| {
                     let addr = sig_start + offset;
                     match mem.read_word(sig_start + offset) {
-                        /*Ok(got) => assert_eq!(
-                            got, want,
-                            "test {} result {} (at 0x{:08x}, abs offset 0x{:x}, local offset 0x{:x})",
-                            test_idx, result_idx, addr, offset, local_offset
-                        ),*/
-                        Ok(got) => assert!(
-                            got == want,
-                            "wrong value for test {} result {}\ngot:  0x{:08x}\nwant: 0x{:08x}\n(at 0x{:08x}, abs offset 0x{:x}, local offset 0x{:x})\n",
-                            test_idx, result_idx, got, want, addr, offset, local_offset
-                        ),
-                        Err(e) => panic!(
-                            "failed to read test {} result {} (at 0x{:08x}: abs offset 0x{:x}, local offset 0x{:x}): {:?}",
-                            test_idx, result_idx, addr, offset, local_offset, e
-                        ),
+                        Ok(got) => {
+                            if got == want {
+                                println!(
+                                    "  OK {:3} 0x{:08x}                   @0x{:08x} (base+{:02}, test+{:02})",
+                                    result_idx, got, addr, offset, local_offset,
+                                );
+                            } else {
+                                mismatches += 1;
+                                println!(
+                                    "FAIL {:3} 0x{:08x} (want 0x{:08x}) @0x{:08x} (base+{:02}, test+{:02})",
+                                    result_idx, got, want, addr, offset, local_offset,
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            println!("FAIL {:3} 0x???????? ({:?})", result_idx, e);
+                            mismatches += 1;
+                        }
                     }
                 });
                 offset += 4;
                 local_offset += 4;
                 result_idx += 1;
+                total += 1;
             } else {
                 panic!("'want' file line {} has invalid syntax", line_num);
             }
 
             line_num += 1;
         }
+    }
+    if mismatches > 0 {
+        panic!("{} of {} test results are incorrect", mismatches, total);
     }
 }
