@@ -1366,9 +1366,20 @@ fn exec_div<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_signed();
+        let bw = b.to_signed();
+        if bw == 0 {
+            // Division by zero produces an all-ones result
+            return u32::from_unsigned(0xffffffff);
+        }
+        if aw == -2147483648 && bw == -1 {
+            // most negative value divided by -1 is an overflow
+            return u32::from_signed(-2147483648);
+        }
+        let result = aw / bw;
+        u32::from_signed(result)
+    })
 }
 
 // Divide Unsigned: Divide rs1 (dividend) by rs2 (divisor) and place the quotient in rd (unsigned).
@@ -1381,9 +1392,16 @@ fn exec_divu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_unsigned();
+        let bw = b.to_unsigned();
+        if bw == 0 {
+            // Division by zero produces all-ones
+            return u32::from_unsigned(0xffffffff);
+        }
+        let result = aw / bw;
+        u32::from_unsigned(result)
+    })
 }
 
 // Debug-Mode Return: .
@@ -2869,9 +2887,12 @@ fn exec_mul<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_unsigned() as u64;
+        let bw = b.to_unsigned() as u64;
+        let result = aw * bw;
+        u32::from_unsigned(result as u32) // truncate high-order bits
+    })
 }
 
 // Multiply High Signed Signed: Multiply signed rs1 by signed rs2 and place the high bits of the result in rd.
@@ -2884,9 +2905,12 @@ fn exec_mulh<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_signed() as i64;
+        let bw = b.to_signed() as i64;
+        let result = (aw * bw) >> 32;
+        u32::from_signed(result as i32)
+    })
 }
 
 // Multiply High Signed Unsigned: Multiply signed rs1 by unsigned rs2 and place the high bits of the result in rd.
@@ -2899,9 +2923,16 @@ fn exec_mulhsu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        // We can't mix signed and unsigned in an operation, but because i64
+        // can represent the entire range of both u32 and i32 we can
+        // convert both to signed, do signed multiplication, and then
+        // capture the high word of the result as normal.
+        let aw = a.to_signed() as i64;
+        let bw = b.to_unsigned() as i64;
+        let result = (aw * bw) >> 32;
+        u32::from_signed(result as i32)
+    })
 }
 
 // Multiply High Unsigned Unsigned: Multiply unsigned rs1 by unsigned rs2 and place the high bits of the result in rd.
@@ -2914,9 +2945,12 @@ fn exec_mulhu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_unsigned() as u64;
+        let bw = b.to_unsigned() as u64;
+        let result = (aw * bw) >> 32;
+        u32::from_unsigned(result as u32)
+    })
 }
 
 // Or: Set rd to the bitwise or of rs1 and rs2.
@@ -2959,9 +2993,20 @@ fn exec_rem<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_signed();
+        let bw = b.to_signed();
+        if bw == 0 {
+            // Division by zero produces the first operand
+            return u32::from_signed(aw);
+        }
+        if aw == -2147483648 && bw == -1 {
+            // most negative value divided by -1 is an overflow, producing zero
+            return u32::from_signed(0);
+        }
+        let result = aw % bw;
+        u32::from_signed(result)
+    })
 }
 
 // Remainder Unsigned: Divide rs1 (dividend) by rs2 (divisor) and place the remainder in rd (unsigned).
@@ -2974,9 +3019,16 @@ fn exec_remu<Mem: Bus<u32>>(
     rs1: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_binary_op(hart, rd, rs1, rs2, |a, b| {
+        let aw = a.to_unsigned();
+        let bw = b.to_unsigned();
+        if bw == 0 {
+            // Division by zero produces the first operand
+            return u32::from_unsigned(aw);
+        }
+        let result = aw % bw;
+        u32::from_unsigned(result)
+    })
 }
 
 // Store Byte: Store 8-bit value from the low bits of rs2 to addr in rs1 plus the 12-bit signed immediate.
