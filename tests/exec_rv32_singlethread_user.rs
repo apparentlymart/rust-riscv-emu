@@ -83,6 +83,33 @@ rv32case!(MULHU, 0x80002000);
 rv32case!(REM, 0x80002000);
 rv32case!(REMU, 0x80002000);
 
+// Tests for the "C" (Compressed) extension
+rv32case!(C_ADD, 0x80002000);
+rv32case!(C_ADDI, 0x80002000);
+rv32case!(C_ADDI16SP, 0x80002000);
+//rv32case!(C_ADDI4SPN, 0x80002000);
+//rv32case!(C_AND, 0x80002000);
+//rv32case!(C_ANDI, 0x80002000);
+//rv32case!(C_BEQZ, 0x80002000);
+//rv32case!(C_BNEZ, 0x80002000);
+//rv32case!(C_J, 0x80002000);
+//rv32case!(C_JAL, 0x80002000);
+//rv32case!(C_JALR, 0x80002000);
+//rv32case!(C_JR, 0x80002000);
+rv32case!(C_LI, 0x80002000);
+rv32case!(C_LUI, 0x80002000);
+//rv32case!(C_LW, 0x80002080);
+//rv32case!(C_LWSP, 0x80002100);
+//rv32case!(C_MV, 0x80002000);
+//rv32case!(C_OR, 0x80002000);
+rv32case!(C_SLLI, 0x80002000);
+//rv32case!(C_SRAI, 0x80002000);
+//rv32case!(C_SRLI, 0x80002000);
+//rv32case!(C_SUB, 0x80002000);
+//rv32case!(C_SW, 0x80002000);
+//rv32case!(C_SWSP, 0x80002000);
+//rv32case!(C_XOR, 0x80002000);
+
 fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
     let start_pc = 0x80000000;
     let mut mem_vec = img.to_owned();
