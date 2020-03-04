@@ -7,7 +7,7 @@ use riscv_emu::isas::RV32;
 use riscv_emu::Int;
 use riscv_emu::IntRegister;
 use riscv_emu::{ops, Instruction, RawInstruction};
-use riscv_emu::{AddressConverter, AddressTransformer, Bus, Memory};
+use riscv_emu::{AddressConverter, AddressTransformer, Bus, Memory, MemoryError};
 use riscv_emu::{Hart, SingleThreadUserHart};
 
 macro_rules! rv32case {
@@ -87,10 +87,10 @@ fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
     let start_pc = 0x80000000;
     let mut mem_vec = img.to_owned();
     let mem_buf = mem_vec.as_mut_slice();
-    let mem = AddressTransformer::new(
+    let mem = MemLogger::new(AddressTransformer::new(
         AddressConverter::new(Memory::new_ram(mem_buf)),
         |addr: u32| Ok(addr.wrapping_sub(start_pc)),
-    );
+    ));
     let mut hart: SingleThreadUserHart<RV32, _> = SingleThreadUserHart::new(mem);
     hart.write_pc(start_pc);
 
@@ -191,5 +191,54 @@ fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
     }
     if mismatches > 0 {
         panic!("{} of {} test results are incorrect", mismatches, total);
+    }
+}
+
+struct MemLogger<Wrapped: Bus<u32>> {
+    wrapped: Wrapped,
+}
+
+impl<Wrapped: Bus<u32>> MemLogger<Wrapped> {
+    fn new(wrapped: Wrapped) -> Self {
+        Self { wrapped: wrapped }
+    }
+}
+
+impl<Wrapped: Bus<u32>> Bus<u32> for MemLogger<Wrapped> {
+    fn read_byte(&mut self, addr: u32) -> Result<u8, MemoryError> {
+        self.wrapped.read_byte(addr)
+    }
+    fn read_halfword(&mut self, addr: u32) -> Result<u16, MemoryError> {
+        self.wrapped.read_halfword(addr)
+    }
+    fn read_word(&mut self, addr: u32) -> Result<u32, MemoryError> {
+        self.wrapped.read_word(addr)
+    }
+    fn read_longword(&mut self, addr: u32) -> Result<u64, MemoryError> {
+        self.wrapped.read_longword(addr)
+    }
+    fn read_quadword(&mut self, addr: u32) -> Result<u128, MemoryError> {
+        self.wrapped.read_quadword(addr)
+    }
+
+    fn write_byte(&mut self, addr: u32, v: u8) -> Result<(), MemoryError> {
+        println!("- write_byte(0x{:08x}, 0x{:02x})", addr, v);
+        self.wrapped.write_byte(addr, v)
+    }
+    fn write_halfword(&mut self, addr: u32, v: u16) -> Result<(), MemoryError> {
+        println!("- write_halfword(0x{:08x}, 0x{:04x})", addr, v);
+        self.wrapped.write_halfword(addr, v)
+    }
+    fn write_word(&mut self, addr: u32, v: u32) -> Result<(), MemoryError> {
+        println!("- write_word(0x{:08x}, 0x{:08x})", addr, v);
+        self.wrapped.write_word(addr, v)
+    }
+    fn write_longword(&mut self, addr: u32, v: u64) -> Result<(), MemoryError> {
+        println!("- write_longword(0x{:08x}, 0x{:016x})", addr, v);
+        self.wrapped.write_longword(addr, v)
+    }
+    fn write_quadword(&mut self, addr: u32, v: u128) -> Result<(), MemoryError> {
+        println!("- write_quadword(0x{:08x}, 0x{:032x})", addr, v);
+        self.wrapped.write_quadword(addr, v)
     }
 }
