@@ -87,7 +87,7 @@ rv32case!(REMU, 0x80002000);
 rv32case!(C_ADD, 0x80002000);
 rv32case!(C_ADDI, 0x80002000);
 rv32case!(C_ADDI16SP, 0x80002000);
-//rv32case!(C_ADDI4SPN, 0x80002000);
+rv32case!(C_ADDI4SPN, 0x80002000);
 //rv32case!(C_AND, 0x80002000);
 //rv32case!(C_ANDI, 0x80002000);
 //rv32case!(C_BEQZ, 0x80002000);

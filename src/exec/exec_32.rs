@@ -791,7 +791,7 @@ fn exec_c_addi16sp<Mem: Bus<u32>>(
     rs1rd: IntRegister,
     nzsimm: i32,
 ) -> ExecStatus<u32> {
-    exec_addi(hart, inst, rs1rd, rs1rd, nzsimm)
+    exec_addi(hart, inst, rs1rd, IntRegister::numbered(2), nzsimm)
 }
 
 // : .
@@ -803,9 +803,13 @@ fn exec_c_addi4spn<Mem: Bus<u32>>(
     rd: IntRegister,
     nzuimm: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_addi(
+        hart,
+        inst,
+        rd,
+        IntRegister::numbered(2),
+        u32::from_unsigned(nzuimm).to_signed(),
+    )
 }
 
 // : .
