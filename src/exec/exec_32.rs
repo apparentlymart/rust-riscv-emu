@@ -817,13 +817,11 @@ fn exec_c_addi4spn<Mem: Bus<u32>>(
 // >
 fn exec_c_addw<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_add(hart, inst, rs1rd, rs1rd, rs2)
 }
 
 // : .
