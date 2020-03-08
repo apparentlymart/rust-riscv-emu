@@ -2543,7 +2543,12 @@ impl OperationRV32 {
                 Self::Invalid
             }
         } else {
-            if raw.matches(0b1110000000000011, 0b1000000000000010) {
+            if raw.matches(0b1110000001111111, 0b1000000000000010) {
+                Self::CJr {
+                    rd: raw.crd0(),
+                    rs1: raw.crs1(),
+                }
+            } else if raw.matches(0b1110000000000011, 0b1000000000000010) {
                 Self::CAdd {
                     rs1rd: raw.crs1rd(),
                     rs2: raw.crs2(),
@@ -2645,11 +2650,6 @@ impl OperationRV32 {
                 Self::CJal { simm: raw.cimmj() }
             } else if raw.matches(0b1110000001111111, 0b1000000000000010) {
                 Self::CJalr {
-                    rd: raw.crd0(),
-                    rs1: raw.crs1(),
-                }
-            } else if raw.matches(0b1110000001111111, 0b1000000000000010) {
-                Self::CJr {
                     rd: raw.crd0(),
                     rs1: raw.crs1(),
                 }

@@ -1003,12 +1003,10 @@ fn exec_c_fswsp<Mem: Bus<u32>>(
 // >
 fn exec_c_j<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_jal(hart, inst, IntRegister::zero(), simm)
 }
 
 // : .
@@ -1016,12 +1014,10 @@ fn exec_c_j<Mem: Bus<u32>>(
 // >
 fn exec_c_jal<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     simm: i32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_jal(hart, inst, IntRegister::numbered(1), simm)
 }
 
 // : .
@@ -1029,13 +1025,11 @@ fn exec_c_jal<Mem: Bus<u32>>(
 // >
 fn exec_c_jalr<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs1: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_jalr(hart, inst, rd, rs1, 0)
 }
 
 // : .
@@ -1043,13 +1037,11 @@ fn exec_c_jalr<Mem: Bus<u32>>(
 // >
 fn exec_c_jr<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs1: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_jalr(hart, inst, rd, rs1, 0)
 }
 
 // : .
