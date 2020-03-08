@@ -2548,7 +2548,12 @@ impl OperationRV32 {
                     rd: raw.crd0(),
                     rs1: raw.crs1(),
                 }
-            } else if raw.matches(0b1110000000000011, 0b1000000000000010) {
+            } else if raw.matches(0b1111000000000011, 0b1000000000000010) && raw.crs2().num() != 0 {
+                Self::CMv {
+                    rd: raw.crd(),
+                    rs2: raw.crs2(),
+                }
+            } else if raw.matches(0b1110000000000011, 0b1000000000000010) && raw.crs2().num() != 0 {
                 Self::CAdd {
                     rs1rd: raw.crs1rd(),
                     rs2: raw.crs2(),
@@ -2673,11 +2678,6 @@ impl OperationRV32 {
                 Self::CLwsp {
                     rd: raw.crd(),
                     uimm: raw.cimmlwsp(),
-                }
-            } else if raw.matches(0b1110000000000011, 0b1000000000000010) {
-                Self::CMv {
-                    rd: raw.crd(),
-                    rs2: raw.crs2(),
                 }
             } else if raw.matches(0b1110111111111111, 0b0000000000000001) {
                 Self::CNop

@@ -1073,14 +1073,12 @@ fn exec_c_lui<Mem: Bus<u32>>(
 // >
 fn exec_c_lw<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs1: IntRegister,
     uimm: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_lw(hart, inst, rd, rs1, u32::from_unsigned(uimm).to_signed())
 }
 
 // : .
@@ -1088,13 +1086,17 @@ fn exec_c_lw<Mem: Bus<u32>>(
 // >
 fn exec_c_lwsp<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     uimm: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_lw(
+        hart,
+        inst,
+        rd,
+        IntRegister::numbered(2),
+        u32::from_unsigned(uimm).to_signed(),
+    )
 }
 
 // : .
@@ -1102,13 +1104,11 @@ fn exec_c_lwsp<Mem: Bus<u32>>(
 // >
 fn exec_c_mv<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rd: IntRegister,
     rs2: IntRegister,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_add(hart, inst, rd, IntRegister::zero(), rs2)
 }
 
 // : .
@@ -1199,14 +1199,12 @@ fn exec_c_subw<Mem: Bus<u32>>(
 // >
 fn exec_c_sw<Mem: Bus<u32>>(
     hart: &mut impl Hart<u32, u32, f64, Mem>,
-    _inst: Instruction<Op, u32>,
+    inst: Instruction<Op, u32>,
     rs1: IntRegister,
     rs2: IntRegister,
     uimm: u32,
 ) -> ExecStatus<u32> {
-    // TODO: Implement
-    hart.exception(ExceptionCause::IllegalInstruction);
-    ExecStatus::Running
+    exec_sw(hart, inst, rs1, rs2, u32::from_unsigned(uimm).to_signed())
 }
 
 // : .

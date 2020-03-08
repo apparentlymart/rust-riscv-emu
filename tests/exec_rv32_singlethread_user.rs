@@ -98,16 +98,16 @@ rv32case!(C_JALR, 0x80002000);
 rv32case!(C_JR, 0x80002000);
 rv32case!(C_LI, 0x80002000);
 rv32case!(C_LUI, 0x80002000);
-//rv32case!(C_LW, 0x80002080);
-//rv32case!(C_LWSP, 0x80002100);
-//rv32case!(C_MV, 0x80002000);
-//rv32case!(C_OR, 0x80002000);
+rv32case!(C_LW, 0x80002080);
+rv32case!(C_LWSP, 0x80002100);
+rv32case!(C_MV, 0x80002000);
+rv32case!(C_OR, 0x80002000);
 rv32case!(C_SLLI, 0x80002000);
-//rv32case!(C_SRAI, 0x80002000);
-//rv32case!(C_SRLI, 0x80002000);
+rv32case!(C_SRAI, 0x80002000);
+rv32case!(C_SRLI, 0x80002000);
 rv32case!(C_SUB, 0x80002000);
-//rv32case!(C_SW, 0x80002000);
-//rv32case!(C_SWSP, 0x80002000);
+rv32case!(C_SW, 0x80002000);
+rv32case!(C_SWSP, 0x80002000);
 rv32case!(C_XOR, 0x80002000);
 
 fn test_case(img: &[u8], want_raw: &[u8], sig_start: u32) {
