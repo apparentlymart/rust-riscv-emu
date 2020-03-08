@@ -2548,6 +2548,11 @@ impl OperationRV32 {
                     rs1rd: raw.crs1rd(),
                     rs2: raw.crs2(),
                 }
+            } else if raw.matches(0b1110110001100011, 0b1000110000100001) {
+                Self::CXor {
+                    rs1rd: raw.crs1rdq(),
+                    rs2: raw.crs2q(),
+                }
             } else if raw.matches(0b1110000000000011, 0b0000000000000001) {
                 Self::CAddi {
                     rs1rd: raw.crs1rd(),
@@ -2716,11 +2721,6 @@ impl OperationRV32 {
                 Self::CSwsp {
                     rs2: raw.crs2(),
                     uimm: raw.cimmswsp(),
-                }
-            } else if raw.matches(0b1110110001100011, 0b1000110000100001) {
-                Self::CXor {
-                    rs1rd: raw.crs1rdq(),
-                    rs2: raw.crs2q(),
                 }
             } else {
                 Self::Invalid
