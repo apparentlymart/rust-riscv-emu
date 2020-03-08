@@ -18,6 +18,14 @@ impl IntRegister {
         return Self(n);
     }
 
+    // Decodes a 3-bit integer register selection from a compressed instruction
+    // into its equivalent 5-bit register number.
+    pub fn c_numbered(n: usize) -> Self {
+        // The rd′, rs1′, and rs2′ arguments correspond to registers
+        // x8 through x15.
+        IntRegister::numbered(n + 8)
+    }
+
     pub fn zero() -> Self {
         Self::numbered(0)
     }
@@ -54,6 +62,14 @@ impl FloatRegister {
             panic!("float register number out of range (0-31 inclusive)");
         }
         return Self(n);
+    }
+
+    // Decodes a 3-bit float register selection from a compressed instruction
+    // into its equivalent 5-bit register number.
+    pub fn c_numbered(n: usize) -> Self {
+        // The rd′, rs1′, and rs2′ arguments correspond to registers
+        // x8 through x15.
+        FloatRegister::numbered(n + 8)
     }
 
     pub fn num(&self) -> usize {

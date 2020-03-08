@@ -283,7 +283,7 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000000000011100) >> 2;
-        return IntRegister::numbered(raw as usize);
+        return IntRegister::c_numbered(raw as usize);
     }
 
     pub fn crs1(&self) -> IntRegister {
@@ -311,7 +311,7 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000001110000000) >> 7;
-        return IntRegister::numbered(raw as usize);
+        return IntRegister::c_numbered(raw as usize);
     }
 
     pub fn crs2(&self) -> IntRegister {
@@ -325,7 +325,7 @@ impl RawInstruction {
         let mut raw: u32 = 0;
         // Fill 0b00000000000000000000000000000111
         raw |= (self.0 & 0b00000000000000000000000000011100) >> 2;
-        return IntRegister::numbered(raw as usize);
+        return IntRegister::c_numbered(raw as usize);
     }
 
     pub fn csr12(&self) -> u32 {
